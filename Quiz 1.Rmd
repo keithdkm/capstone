@@ -1,0 +1,12 @@
+---
+title: "Quiz 1 Answers"
+author: "Keith Miller"
+date: "July 15, 2015"
+output: html_document
+---
+1. The en_US.blogs.txt file is `r round(file.size("Initial Dataset/final/en_US/en_US.blogs.txt")/10^6,0)` Mbytes. The en_US.news.txt file is `r round(file.size("Initial Dataset/final/en_US/en_US.news.txt")/10^6,0)` Mbytes. The en_US.twitter.txt file is `r round(file.size("Initial Dataset/final/en_US/en_US.twitter.txt")/10^6,0)` Mbytes
+2. The en_US.blogs.txt has `r format(length(allblogs),big.mark=',')` lines. The en_US.news.txt has `r format(length(allnews),big.mark=',')` lines.  The en_US.twitter.txt has `r format(length(alltwitter),big.mark=',')` lines.
+3. The maximum length of a line in the blog file is `r max(nchar(allblogs))` characters.  The maximum length of a line in the news file is `r max(nchar(allnews))` characters.  The maximum length of a line in the twitter file is `r max(nchar(alltwitter))` characters.  
+4. The ratio of the number of times love appears to number of times hate appears in the twitter file is `r lhratio`.
+5. The line of text from the twitter feed is "`r q5text`".
+6. `r length(grep('A computer once beat me at chess, but it was no match for me at kickboxing',alltwitter))` lines have "A computer once beat me at chess, but it was no match for me at kickboxing" in them.

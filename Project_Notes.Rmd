@@ -28,6 +28,8 @@ library("caret", lib.loc="~/R/win-library/3.2")
 library("e1071", lib.loc="~/R/win-library/3.2")
 library("tm",    lib.loc="~/R/win-library/3.2")
 library("RWeka", lib.loc="~/R/win-library/3.2")
+setwd("~/R/Capstone")
+
 # options(mc.cores=2)
 
 ```
@@ -47,40 +49,19 @@ One piece of manual clean up was performed on the en_US.news.txt file.  A SUB ch
 
 ```{r Read in all the Data, cache=FALSE, echo=FALSE}
 #Text is read in encoded as UTF-8
-setwd("C:/Users/Keith_2/Documents/R/10. Capstone")
-allblogs<-readLines("Initial Dataset/final/en_US/en_US.blogs.txt",
-                    n       = -1,
-                    skipNul = TRUE, 
-                    warn    = FALSE,
-                    encoding= "UTF-8")
-allnews<-readLines("Initial Dataset/final/en_US/en_US.news.txt", 
-                    n       = -1,
-                    skipNul = TRUE, 
-                    warn    = FALSE ,
-                    encoding= "UTF-8")
-alltwitter<-readLines("Initial Dataset/final/en_US/en_US.twitter.txt",
-                      n       = -1,
-                      skipNul = TRUE, 
-                      warn    = FALSE,
-                      encoding= "UTF-8")
+
 
 ```
 ###Quiz 1 Answers
 ```{r  Calculations for Quiz 1 answers, cache=TRUE, echo=FALSE}
 
 #Question 4 Number of lines in en_US.twitter where the word 'love' appears
-lhratio <-  length(grep("love", alltwitter, ignore.case = FALSE))/        length(grep("hate", alltwitter, ignore.case = FALSE))
-q5text<- alltwitter[grep('biostats',alltwitter)]
+# lhratio <-  length(grep("love", alltwitter, ignore.case = FALSE))/        length(grep("hate", alltwitter, ignore.case = FALSE))
+# q5text<- alltwitter[grep('biostats',alltwitter)]
 
 
 ```
 
-1. The en_US.blogs.txt file is `r round(file.size("Initial Dataset/final/en_US/en_US.blogs.txt")/10^6,0)` Mbytes. The en_US.news.txt file is `r round(file.size("Initial Dataset/final/en_US/en_US.news.txt")/10^6,0)` Mbytes. The en_US.twitter.txt file is `r round(file.size("Initial Dataset/final/en_US/en_US.twitter.txt")/10^6,0)` Mbytes
-2. The en_US.blogs.txt has `r format(length(allblogs),big.mark=',')` lines. The en_US.news.txt has `r format(length(allnews),big.mark=',')` lines.  The en_US.twitter.txt has `r format(length(alltwitter),big.mark=',')` lines.
-3. The maximum length of a line in the blog file is `r max(nchar(allblogs))` characters.  The maximum length of a line in the news file is `r max(nchar(allnews))` characters.  The maximum length of a line in the twitter file is `r max(nchar(alltwitter))` characters.  
-4. The ratio of the number of times love appears to number of times hate appears in the twitter file is `r lhratio`.
-5. The line of text from the twitter feed is "`r q5text`".
-6. `r length(grep('A computer once beat me at chess, but it was no match for me at kickboxing',alltwitter))` lines have "A computer once beat me at chess, but it was no match for me at kickboxing" in them.
 
 ##Task 1 : Data acquisition and cleaning
 
@@ -91,37 +72,16 @@ The datasets that we have available are large so for initial data cleaning, expl
 
 ####What sampling technique should we use?
 I will build randomly generated vectors of indices.  For initial exploratory work just one sample will be generated from each file
-
-```{r  Generate a sample, cache=TRUE}
-set.seed(11051205)
-n         <- 1  # sets the number of samples
-size      <- 0.001  # what proportion of the file should the sample represent
-print(paste("Producing ",n," Sample(s), each representing ", as.character(size*100)," percent of the full text"))
-mn.char.blogs <- round(mean(nchar(allblogs)))  #calculate the mean number of characters in each line
-mn.char.news    <- round(mean(nchar(allnews)))
-mn.char.twitter <- round(mean(nchar(alltwitter)))
+```{r Read in prepared samples}
 
 
-blogs.inds      <-   sample(x      = length(allblogs), 
-                           size    = round(n* size* length(allblogs)), 
-                           replace = FALSE)
-news.inds       <-   sample(x      = length(allnews), 
-                           size    = round(n* size* length(allnews)),
-                           replace = FALSE)
-twitter.inds    <-   sample(x      = length(alltwitter), 
-                           size    = round(n* size* length(alltwitter)),
-                           replace = FALSE)
- 
-tr.blog   <- paste(allblogs[blogs.inds],collapse = ".")
-tr.news    <- allnews [news.inds]
-tr.twitter <- alltwitter [twitter.inds]
+tr.blog<-readRDS("Sample Data/blogsamp.RDS")
 
 corp.blog <- VCorpus(VectorSource(tr.blog))
-
-
 ```
+
 ## Benchmarking
-Running the 5% **uncleaned** sample of the blog data through the tokenizer for 2grams and 3grams required 2Gb of memory, took about 5 minutes and generated `r format(length(blog.tdm$i))` tokens
+Running the 5% **uncleaned** sample of the blog data through the tokenizer for 2grams and 3grams required 2Gb of memory, took about 5 minutes and generated ?? tokens
 
 Running the 0.1% **uncleaned** sample of the blog data through the tokenizer for 2,3,4,5 grams ran in about a minute and generated 129157 tokens.  
 
@@ -136,18 +96,21 @@ Running the 0.1% **uncleaned** sample of the blog data through the tokenizer for
 
 clean<-function(x){
   x<-tm_map(x, stripWhitespace)
-  x<-tm_map(x, removePunctuation)
+  # x<-tm_map(x, removePunctuation)
   x<-tm_map(x, removeNumbers)
-  x<-tm_map(x, content_transformer(tolower))
+  # x<-tm_map(x, removeWords,stopwords("en"))
+  # x<-tm_map(x, content_transformer(tolower))
   f<-content_transformer(function(x,pattern,new) 
                                 gsub(pattern,
                                      new,
                                      x))
-  x<-tm_map(x,f,'[0-9]',"")
+  x<-tm_map(x,f,'[\'\"]',"")
   # x<-tm_map(x,gsub('[:;,-_#]',""))
 }
 
 corp.blog <- clean(corp.blog)
+
+writeLines(corp.blog[[1]]$content, "cleantext.txt")
 
 ```
 
@@ -167,12 +130,13 @@ corp.blog <- clean(corp.blog)
 #Take the cleaned corpus and Tokenize it
 
 Tokenizer <- function(x) NGramTokenizer(x, 
-                                        Weka_control(min = 2, 
+                                        Weka_control(min = 1, 
                                                      max = 5, 
-                                                     delimiters = "- \r\n\t.,;:'\"()?!"))
-blog.tdm <- TermDocumentMatrix(corp.blog, control = list(tokenize = Tokenizer))
+                                                     delimiters = "-_|        \r\n\t.,;:\'\"()?!"))
+ blog.tdm <- TermDocumentMatrix(corp.blog, control = list(tokenize = Tokenizer))
 
-
+freqtable<-data.table(Token     = blog.tdm$dimnames[[1]], 
+                      Frequency = blog.tdm$v)
 
 ```
 
@@ -182,11 +146,11 @@ blog.tdm <- TermDocumentMatrix(corp.blog, control = list(tokenize = Tokenizer))
 - What is the distribution of line lengths?  Important if lines are going to be the sampling unit we use. 
 - what is the variance of line lengths
 - What is the distribution of sentence lengths
-```{r  Line lengthe distributions}
-par(mfrow = c(2,2))
-hist(log10(nchar(allnews)))
-hist(log10(nchar(allblogs)))
-hist(log10(nchar(alltwitter)))
+```{r  Line length distributions, echo=FALSE}
+# par(mfrow = c(2,2))
+# hist(log10(nchar(allnews)))
+# hist(log10(nchar(allblogs)))
+# hist(log10(nchar(alltwitter)))
 
 ```
 ##Questions 
