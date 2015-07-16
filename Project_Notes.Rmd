@@ -30,7 +30,7 @@ library("tm",    lib.loc="~/R/win-library/3.2")
 library("RWeka", lib.loc="~/R/win-library/3.2")
 setwd("~/R/Capstone")
 
-# options(mc.cores=2)
+options(mc.cores=4)
 
 ```
 
@@ -80,32 +80,35 @@ tr.blog<-readRDS("Sample Data/blogsamp.RDS")
 corp.blog <- VCorpus(VectorSource(tr.blog))
 ```
 
-## Benchmarking
-Running the 5% **uncleaned** sample of the blog data through the tokenizer for 2grams and 3grams required 2Gb of memory, took about 5 minutes and generated ?? tokens
 
-Running the 0.1% **uncleaned** sample of the blog data through the tokenizer for 2,3,4,5 grams ran in about a minute and generated 129157 tokens.  
-
-##Cleaning the data
+###Cleaning the data
 
 ```{r Clean data function}
-# This function removes cleans the data stream to clean the data streams.  Intitially we wil remove 
-# Additional whitespace beyond a single space
-# Remove digits
-# 
-# 
 
 clean<-function(x){
+# This function removes cleans the data stream to clean the data streams.  Intitially we wil remove 
+# Remove any whitespace beyond a single space between words  
   x<-tm_map(x, stripWhitespace)
-  # x<-tm_map(x, removePunctuation)
+# Remove punctuation  -  
+# x<-tm_map(x, removePunctuation, preserve_intra_word_dashes = TRUE)
+# Remove numerics  
   x<-tm_map(x, removeNumbers)
-  # x<-tm_map(x, removeWords,stopwords("en"))
-  # x<-tm_map(x, content_transformer(tolower))
-  f<-content_transformer(function(x,pattern,new) 
-                                gsub(pattern,
-                                     new,
-                                     x))
-  x<-tm_map(x,f,'[\'\"]',"")
-  # x<-tm_map(x,gsub('[:;,-_#]',""))
+# x<-tm_map(x, removeWords,stopwords("en"))
+  
+#Remove any words appearing on Google's list of profane words  
+  con<-file("Required Data/dirty.txt",'r')
+  profanity<-readLines(con)
+  close(con)
+  x<-tm_map(x,removeWords,profanity)
+
+# Make all words lower case. We are not going to try and predict proper nouns 
+  x<-tm_map(x, content_transformer(tolower))
+
+# Remove certain characters    
+  replacechars<-content_transformer(function(x,pattern,new) 
+                                gsub(pattern, new, x))
+  x<-tm_map(x,replacechars,'[-_\"~$%^*+=@<>—“”–\']',"")
+
 }
 
 corp.blog <- clean(corp.blog)
@@ -117,7 +120,7 @@ writeLines(corp.blog[[1]]$content, "cleantext.txt")
 
 - Remove foreign characters
 - Identify sentences
-- Remove proper nouns? 
+- Remove proper nouns-  no but they are converted to lower case
 - Remove punctuation except periods.  What about apostrophes? 
 - Remove extra whitespace
 - Remove numbers and replace with period or some other flag showing that the two words are NOT associated directly with one another
@@ -125,40 +128,39 @@ writeLines(corp.blog[[1]]$content, "cleantext.txt")
 - Patronymics
 - Remove single letters that are not I and a
 
-##Tokenize the Data
+###Tokenize the Data
 ```{r Tokenize the data}
 #Take the cleaned corpus and Tokenize it
 
 Tokenizer <- function(x) NGramTokenizer(x, 
                                         Weka_control(min = 1, 
-                                                     max = 5, 
-                                                     delimiters = "-_|        \r\n\t.,;:\'\"()?!"))
- blog.tdm <- TermDocumentMatrix(corp.blog, control = list(tokenize = Tokenizer))
+                                                     max = 1,
+                                                     delimiters =" "))
+# delimiters =" -_|\n\t.,;:\'\"()?!"
+  blog.tdm <- TermDocumentMatrix(corp.blog, control = list(tokenize = Tokenizer))
 
 freqtable<-data.table(Token     = blog.tdm$dimnames[[1]], 
                       Frequency = blog.tdm$v)
 
+freqwords<-findFreqTerms(blog.tdm,lowfreq=10)
 ```
 
+#### Benchmarking
+Running the 5% **uncleaned** sample of the blog data through the tokenizer for 2grams and 3grams required 2Gb of memory, took about 5 minutes and generated ?? tokens
+
+Running the 0.1% **uncleaned** sample of the blog data through the tokenizer for 2,3,4,5 grams ran in about a minute and generated 129157 tokens.  
 
 
-##Exploratory Data Analysis
+##Task 2: Exploratory Data Analysis
 - What is the distribution of line lengths?  Important if lines are going to be the sampling unit we use. 
-- what is the variance of line lengths
-- What is the distribution of sentence lengths
-```{r  Line length distributions, echo=FALSE}
-# par(mfrow = c(2,2))
-# hist(log10(nchar(allnews)))
-# hist(log10(nchar(allblogs)))
-# hist(log10(nchar(alltwitter)))
 
-```
+
 ##Questions 
-- Should we use stopwords ?  Which ones?
-- Do we need to use stemmed words?   
+- Should we use stopwords ?  Which ones?  Stopwords are being left in as you want to both predict stopwords and use them for prediction
+- Do we need to use stemmed words?   No, words will be used as they are.
 - How do we break ties?
 - Use a hashing function for fast searching of Ngrams
-- Use RDS files for rapid file writing and reading
+- Use RDS files for rapid file writing and reading.  
 - Should lemmatization - probably not - loses context
 - Should we alter contractions,  probably as "it's"" and "it is"" should predict the same thing but we don't want to predict a contracted item.  However if we do that then we need to translate contractions before predicting.  Problem - what happens if there's two possible expansions.
 - Shoudl we predict paired capitalized words such as New York, El Paso Also possible that Capitalized words should be removed entirely.  May be removed by sparse filter from TDM

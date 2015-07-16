@@ -1,6 +1,6 @@
 corpsample<-function(n,size)
   #function  n samples of size% sample of the target files
-{setwd("C:/Users/Keith_2/Documents/R/Capstone")
+{setwd("~/R/Capstone")
   allblogs<-readLines("Initial Dataset/final/en_US/en_US.blogs.txt",
                       n       = -1,
                       skipNul = TRUE, 
@@ -36,7 +36,7 @@ blogs.inds      <-   sample(x      = length(allblogs),
 #                             size    = round(n* size* length(alltwitter)),
 #                             replace = FALSE)
 
-tr.blog   <- paste(allblogs[blogs.inds[c(1,2)]],collapse = ".")
+tr.blog   <- paste(allblogs[blogs.inds],collapse = " ")
 print(allblogs[blogs.inds[1]]);print(allblogs[blogs.inds[2]])
 # tr.news    <- paste(allnews [news.inds],collapse = ".")
 # tr.twitter <- paste(alltwitter [twitter.inds],collapse = ".")
