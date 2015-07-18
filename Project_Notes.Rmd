@@ -28,6 +28,8 @@ library("caret", lib.loc="~/R/win-library/3.2")
 library("e1071", lib.loc="~/R/win-library/3.2")
 library("tm",    lib.loc="~/R/win-library/3.2")
 library("RWeka", lib.loc="~/R/win-library/3.2")
+library("data.table", lib.loc = "~/R/win-library/3.2" )
+library("stringi", lib.loc = "~/R/win-library/3.2" )
 setwd("~/R/Capstone")
 
 options(mc.cores=4)
@@ -68,7 +70,7 @@ One piece of manual clean up was performed on the en_US.news.txt file.  A SUB ch
 
 
 ###Sample the data
-The datasets that we have available are large so for initial data cleaning, exploratory data analysis, statistical analysis and model development we shall use a small fraction of the data. 
+The datasets that we have available are large so for initial data cleaning, exploratory data analysis, statistical analysis and model development we shall use a small fraction of the data.   The approach will be to take many  samples of several thousand lines.  We will then average the n-gram frequencies of these samples to approximate the popualtion frequency. 
 
 ####What sampling technique should we use?
 I will build randomly generated vectors of indices.  For initial exploratory work just one sample will be generated from each file
@@ -88,45 +90,40 @@ corp.blog <- VCorpus(VectorSource(tr.blog))
 clean<-function(x){
 # This function removes cleans the data stream to clean the data streams.  Intitially we wil remove 
 # Remove any whitespace beyond a single space between words  
-  x<-tm_map(x, stripWhitespace)
-# Remove punctuation  -  
-# x<-tm_map(x, removePunctuation, preserve_intra_word_dashes = TRUE)
-# Remove numerics  
-  x<-tm_map(x, removeNumbers)
-# x<-tm_map(x, removeWords,stopwords("en"))
-  
-#Remove any words appearing on Google's list of profane words  
+
+# Remove any words appearing on Google's list of profane words  
   con<-file("Required Data/dirty.txt",'r')
   profanity<-readLines(con)
   close(con)
   x<-tm_map(x,removeWords,profanity)
 
-# Make all words lower case. We are not going to try and predict proper nouns 
-  x<-tm_map(x, content_transformer(tolower))
-
 # Remove certain characters    
-  replacechars<-content_transformer(function(x,pattern,new) 
-                                gsub(pattern, new, x))
-  x<-tm_map(x,replacechars,'[-_\"~$%^*+=@<>—“”–\']',"")
-
+  replacechars<-content_transformer(function(x,pattern,new) gsub(pattern, new, x))
+  x<-tm_map(x, replacechars, '[.?!]+[ ]',              "\n")  #replace all sentence ending chars with newline
+  x<-tm_map(x, replacechars, '[\'\`]',      "" )  #remove apostrohes from contractions 
+  x<-tm_map(x, replacechars, '[0-9()\"“”:;]', ".") #All other stop characters and numerics replace with a period
+  x<-tm_map(x, replacechars, '[^a-zA-Z. \n]',         "")  #remove all other unknown chars
+  x<-tm_map(x, replacechars, '[ ][^AaIi\n][ ]',       ".")  #Remove single letters that are not valid single letters
+  x<-tm_map(x, replacechars, '[ ][ ]+', " ")  #remove extra whitespace
 }
 
-corp.blog <- clean(corp.blog)
+clean.corp.blog <- clean(corp.blog)
 
-writeLines(corp.blog[[1]]$content, "cleantext.txt")
+writeLines(clean.corp.blog[[1]]$content, "cleantext.txt")
 
 ```
 
 
-- Remove foreign characters
-- Identify sentences
+- Remove foreign characters  Yes
+- Identify sentences Yes
 - Remove proper nouns-  no but they are converted to lower case
-- Remove punctuation except periods.  What about apostrophes? 
+- Remove punctuation except periods.  - Periods at the end of sentences are replaced by newlines to maintain sntence.  All other chararcters are removed and replaced witha period 
 - Remove extra whitespace
 - Remove numbers and replace with period or some other flag showing that the two words are NOT associated directly with one another
 - How will I deal with contractions?  e.g. We'd = we would, It's = It is or It has
 - Patronymics
 - Remove single letters that are not I and a
+-
 
 ###Tokenize the Data
 ```{r Tokenize the data}
@@ -134,28 +131,35 @@ writeLines(corp.blog[[1]]$content, "cleantext.txt")
 
 Tokenizer <- function(x) NGramTokenizer(x, 
                                         Weka_control(min = 1, 
-                                                     max = 1,
-                                                     delimiters =" "))
+                                                     max = 3,
+                                                     delimiters =" ."))
 # delimiters =" -_|\n\t.,;:\'\"()?!"
-  blog.tdm <- TermDocumentMatrix(corp.blog, control = list(tokenize = Tokenizer))
+blog.tdm <- TermDocumentMatrix(clean.corp.blog, control = list(tokenize = Tokenizer))
 
-freqtable<-data.table(Token     = blog.tdm$dimnames[[1]], 
+freqtable<-data.table(Token     = blog.tdm$dimnames[[1]], Length = stri_count_words(blog.tdm$dimnames[[1]]),
                       Frequency = blog.tdm$v)
+freqtable<-freqtable[-grep('\n',freqtable$Token),]  #remove terms containing a new line i.c token that span sentences
 
-freqwords<-findFreqTerms(blog.tdm,lowfreq=10)
+freqtable<-freqtable[order(freqtable$Length,freqtable$Token,freqtable$Frequency),]
+
+freqwords<-findFreqTerms(blog.tdm,lowfreq=5)
 ```
 
 #### Benchmarking
-Running the 5% **uncleaned** sample of the blog data through the tokenizer for 2grams and 3grams required 2Gb of memory, took about 5 minutes and generated ?? tokens
 
-Running the 0.1% **uncleaned** sample of the blog data through the tokenizer for 2,3,4,5 grams ran in about a minute and generated 129157 tokens.  
 
 
 ##Task 2: Exploratory Data Analysis
-- What is the distribution of line lengths?  Important if lines are going to be the sampling unit we use. 
 
 
-##Questions 
+###Question to Consider
+1. Some words are more frequent than others - what are the distributions of word frequencies?
+1. What are the frequencies of 2-grams and 3-grams in the dataset?
+1. How many unique words do you need in a frequency sorted dictionary to cover 50% of all word instances in the language? 90%?
+1. How do you evaluate how many of the words come from foreign languages?
+1. Can you think of a way to increase the coverage -- identifying words that may not be in the corpora or using a smaller number of words in the dictionary to cover the same number of phrases?
+
+### My issues  
 - Should we use stopwords ?  Which ones?  Stopwords are being left in as you want to both predict stopwords and use them for prediction
 - Do we need to use stemmed words?   No, words will be used as they are.
 - How do we break ties?
@@ -165,5 +169,3 @@ Running the 0.1% **uncleaned** sample of the blog data through the tokenizer for
 - Should we alter contractions,  probably as "it's"" and "it is"" should predict the same thing but we don't want to predict a contracted item.  However if we do that then we need to translate contractions before predicting.  Problem - what happens if there's two possible expansions.
 - Shoudl we predict paired capitalized words such as New York, El Paso Also possible that Capitalized words should be removed entirely.  May be removed by sparse filter from TDM
 - Abbreviations? 
-
-

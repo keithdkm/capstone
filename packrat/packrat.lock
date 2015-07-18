@@ -82,10 +82,21 @@ Version: 6.0-47
 Hash: 6eba4c9f58f8c2d501af9fb1d9e83390
 Requires: BradleyTerry2, car, foreach, ggplot2, plyr, reshape2
 
+Package: chron
+Source: CRAN
+Version: 2.3-47
+Hash: d25d96d908cd21080f24c89eed4c80a0
+
 Package: colorspace
 Source: CRAN
 Version: 1.2-6
 Hash: 00bb12245cd975c450cc4a960884fa15
+
+Package: data.table
+Source: CRAN
+Version: 1.9.4
+Hash: b89234fb0b26ff6f53399cb5359d71a1
+Requires: chron, reshape2
 
 Package: dichromat
 Source: CRAN
