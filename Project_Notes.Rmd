@@ -81,7 +81,8 @@ tr.blog<-readRDS("Sample Data/trsamp.RDS")
 
 corp.blog <- VCorpus(VectorSource(tr.blog))
 ```
-
+####How do we decide on sample size
+At what number of samples does the number of 1-grams stop increasing?
 
 ###Cleaning the data
 
@@ -150,6 +151,8 @@ freqwords<-findFreqTerms(blog.tdm,lowfreq=5)
 
 ##Task 2: Exploratory Data Analysis
 
+##Task 3: Modelling
+
 
 ###Question to Consider
 1. Some words are more frequent than others - what are the distributions of word frequencies?
@@ -159,6 +162,7 @@ freqwords<-findFreqTerms(blog.tdm,lowfreq=5)
 1. Can you think of a way to increase the coverage -- identifying words that may not be in the corpora or using a smaller number of words in the dictionary to cover the same number of phrases?
 
 ### My issues  
+
 - Should we use stopwords ?  Which ones?  Stopwords are being left in as you want to both predict stopwords and use them for prediction
 - Do we need to use stemmed words?   No, words will be used as they are.
 - How do we break ties?
