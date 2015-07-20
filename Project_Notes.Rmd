@@ -79,7 +79,8 @@ tr.blog<-readRDS("Sample Data/blogsamp.RDS")
 
 corp.blog <- VCorpus(VectorSource(tr.blog))
 ```
-
+####How do we decide on sample size
+At what number of samples does the number of 1-grams stop increasing?
 
 ###Cleaning the data
 
@@ -154,7 +155,11 @@ Running the 0.1% **uncleaned** sample of the blog data through the tokenizer for
 ##Task 2: Exploratory Data Analysis
 - What is the distribution of line lengths?  Important if lines are going to be the sampling unit we use. 
 
+##Task 3: Modelling
 
+- Source affects probablilties of words
+- Sentence position affects probabilities
+- What is the probability that a word is located in a particular position 
 ##Questions 
 - Should we use stopwords ?  Which ones?  Stopwords are being left in as you want to both predict stopwords and use them for prediction
 - Do we need to use stemmed words?   No, words will be used as they are.
