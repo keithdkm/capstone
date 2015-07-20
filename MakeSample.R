@@ -6,42 +6,45 @@ corpSample<-function(n,size)
                       skipNul = TRUE, 
                       warn    = FALSE,
                       encoding= "UTF-8")
-#   allnews<-readLines("Initial Dataset/final/en_US/en_US.news.txt", 
-#                      n       = -1,
-#                      skipNul = TRUE, 
-#                      warn    = FALSE ,
-#                      encoding= "UTF-8")
-#   alltwitter<-readLines("Initial Dataset/final/en_US/en_US.twitter.txt",
-#                         n       = -1,
-#                         skipNul = TRUE, 
-#                         warn    = FALSE,
-#                         encoding= "UTF-8")
+  allnews<-readLines("Initial Dataset/final/en_US/en_US.news.txt", 
+                     n       = -1,
+                     skipNul = TRUE, 
+                     warn    = FALSE ,
+                     encoding= "UTF-8")
+  alltwitter<-readLines("Initial Dataset/final/en_US/en_US.twitter.txt",
+                        n       = -1,
+                        skipNul = TRUE, 
+                        warn    = FALSE,
+                        encoding= "UTF-8")
 
 
 set.seed(11051205)
 print(paste("Producing ",n," Sample(s), each representing ", as.character(size)," percent of the full text"))
 size      <- size/100  # what proportion of the file should the sample represent
-# mn.char.blogs <- round(mean(nchar(allblogs)))  #calculate the mean number of characters in each line
-# mn.char.news    <- round(mean(nchar(allnews)))
-# mn.char.twitter <- round(mean(nchar(alltwitter)))
 
 
 blogs.inds      <-   sample(x      = length(allblogs), 
                             size    = round(n* size* length(allblogs)), 
                             replace = FALSE)
-# news.inds       <-   sample(x      = length(allnews), 
-#                             size    = round(n* size* length(allnews)),
-#                             replace = FALSE)
-# twitter.inds    <-   sample(x      = length(alltwitter), 
-#                             size    = round(n* size* length(alltwitter)),
-#                             replace = FALSE)
+news.inds       <-   sample(x      = length(allnews), 
+                            size    = round(n* size* length(allnews)),
+                            replace = FALSE)
+twitter.inds    <-   sample(x      = length(alltwitter), 
+                            size    = round(n* size* length(alltwitter)),
+                            replace = FALSE)
 
-tr.blog   <- paste(allblogs[blogs.inds],collapse = " ")
+tr.blogs   <- paste(allblogs[blogs.inds],collapse = " ")
+tr.news    <- paste(allnews [news.inds],collapse = " ")
+tr.twitter <- paste(alltwitter [twitter.inds],collapse = " ")
 
-# tr.news    <- paste(allnews [news.inds],collapse = ".")
-# tr.twitter <- paste(alltwitter [twitter.inds],collapse = ".")
+corp.blogs <- VCorpus(VectorSource(tr.blogs))
+corp.news <- VCorpus(VectorSource(tr.news))
+corp.twitter <- VCorpus(VectorSource(tr.twitter))
 
-saveRDS(tr.blog, file = "Sample Data/blogsamp.RDS")
+tr.samp <-c(corp.blogs,corp.news,corp.twitter)
+
+
+saveRDS(tr.samp, file = "Sample Data/trsamp.RDS")
 # saveRDS(tr.news, file = "Sample Data/newssamp.RDS")
 # saveRDS(tr.twitter, file = "Sample Data/twittersamp.RDS")
 
