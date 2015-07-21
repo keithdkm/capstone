@@ -24,12 +24,12 @@ output: html_document
 - What is the relationship between NLP and the concepts you have learned in the Specialization?
 
 ```{r Libraries, warning=FALSE,message=FALSE}
-library("caret", lib.loc="~/R/win-library/3.2")
-library("e1071", lib.loc="~/R/win-library/3.2")
-library("tm",    lib.loc="~/R/win-library/3.2")
-library("RWeka", lib.loc="~/R/win-library/3.2")
-library("data.table", lib.loc = "~/R/win-library/3.2" )
-library("stringi", lib.loc = "~/R/win-library/3.2" )
+library("caret", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("e1071", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("tm",    lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("data.table", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("stringi", lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 setwd("~/R/Capstone")
 
 options(mc.cores=4)
@@ -77,7 +77,7 @@ I will build randomly generated vectors of indices.  For initial exploratory wor
 ```{r Read in prepared samples}
 
 
-tr.blog<-readRDS("Sample Data/blogsamp.RDS")
+tr.blog<-readRDS("Sample Data/trsamp.RDS")
 
 corp.blog <- VCorpus(VectorSource(tr.blog))
 ```
@@ -110,44 +110,43 @@ clean<-function(x){
 
 clean.corp.blog <- clean(corp.blog)
 
-writeLines(clean.corp.blog[[1]]$content, "cleantext.txt")
+writeLines(clean.corp.blog[[1]]$content, "cleantext.txt")  #write out file for inspection
 
 ```
 
-
+####Blog Data Cleaning Approach
 - Remove foreign characters  Yes
 - Identify sentences Yes
-- Remove proper nouns-  no but they are converted to lower case
-- Remove punctuation except periods.  - Periods at the end of sentences are replaced by newlines to maintain sntence.  All other chararcters are removed and replaced witha period 
-- Remove extra whitespace
-- Remove numbers and replace with period or some other flag showing that the two words are NOT associated directly with one another
-- How will I deal with contractions?  e.g. We'd = we would, It's = It is or It has
+- Remove proper nouns-  no but they are converted to lower case.  it is assumed that they will be infrequent enough not to matter.  
+- Remove punctuation except periods.  - Periods at the end of sentences are replaced by newlines to maintain sentence structure so that ngrams that span sentences can be discarded.  All other chararcters are removed and replaced witha period 
+- Remove extra whitespace Yes
+- Remove numbers and replace with period or some other flag showing that the two words are NOT associated directly with one another Yes
+- How will I deal with contractions?  e.g. We'd = we would, It's = It is or It has.  Contractions are handles by ignoring the apostrophe.  Text filter for the prediction algorithm must do the same
 - Patronymics
-- Remove single letters that are not I and a
+- Remove single letters that are not I and a - Yes
 -
 
 ###Tokenize the Data
 ```{r Tokenize the data}
-#Take the cleaned corpus and Tokenize it
+#Take the cleaned corpus and Tokenize it into 1gram, 2grams and 3grams.
 
 Tokenizer <- function(x) NGramTokenizer(x, 
                                         Weka_control(min = 1, 
                                                      max = 3,
-                                                     delimiters =" ."))
-# delimiters =" -_|\n\t.,;:\'\"()?!"
+                                                     delimiters =" .\n"))
+
 blog.tdm <- TermDocumentMatrix(clean.corp.blog, control = list(tokenize = Tokenizer))
 
 freqtable<-data.table(Token     = blog.tdm$dimnames[[1]], Length = stri_count_words(blog.tdm$dimnames[[1]]),
                       Frequency = blog.tdm$v)
-freqtable<-freqtable[-grep('\n',freqtable$Token),]  #remove terms containing a new line i.c token that span sentences
+freqtable<-freqtable[-grep('\n',freqtable$Token),]  #remove terms containing a new line i.e. token that span sentences
 
 freqtable<-freqtable[order(freqtable$Length,freqtable$Token,freqtable$Frequency),]
 
 freqwords<-findFreqTerms(blog.tdm,lowfreq=5)
+
+
 ```
-
-#### Benchmarking
-
 
 
 ##Task 2: Exploratory Data Analysis
@@ -173,3 +172,22 @@ freqwords<-findFreqTerms(blog.tdm,lowfreq=5)
 - Should we alter contractions,  probably as "it's"" and "it is"" should predict the same thing but we don't want to predict a contracted item.  However if we do that then we need to translate contractions before predicting.  Problem - what happens if there's two possible expansions.
 - Shoudl we predict paired capitalized words such as New York, El Paso Also possible that Capitalized words should be removed entirely.  May be removed by sparse filter from TDM
 - Abbreviations? 
+
+##Task 3 Modeling
+
+
+The goal here is to build your first simple model for the relationship between words. This is the first step in building a predictive text mining application. You will explore simple models and discover more complicated modeling techniques.
+
+###Tasks to accomplish
+
+1. Build basic n-gram model - using the exploratory analysis you performed, build a basic n-gram model (http://en.wikipedia.org/wiki/N-gram) for predicting the next word based on the previous 1, 2, or 3 words.
+2. Build a model to handle unseen n-grams - in some cases people will want to type a combination of words that does not appear in the corpora. Build a model to handle cases where a particular n-gram isn't observed.
+
+###Questions to consider
+
+1. How can you efficiently store an n-gram model (think Markov Chains)?
+2. How can you use the knowledge about word frequencies to make your model smaller and more efficient?
+3. How many parameters do you need (i.e. how big is n in your n-gram model)?
+4. Can you think of simple ways to "smooth" the probabilities (think about giving all n-grams a non-zero probability even if they aren't observed in the data) ?
+1. How do you evaluate whether your model is any good?
+1. How can you use backoff models (http://en.wikipedia.org/wiki/Katz%27s_back-off_model)to estimate the probability of unobserved n-grams?
