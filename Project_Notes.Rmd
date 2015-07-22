@@ -49,20 +49,6 @@ I decided to read in all the data first and use R to explore the dataset.  My pl
 
 One piece of manual clean up was performed on the en_US.news.txt file.  A SUB character was removed with a text editor.  It was located in line 77259 between the words 1 and gallons. 
 
-```{r Read in all the Data, cache=FALSE, echo=FALSE}
-#Text is read in encoded as UTF-8
-
-
-```
-###Quiz 1 Answers
-```{r  Calculations for Quiz 1 answers, cache=TRUE, echo=FALSE}
-
-#Question 4 Number of lines in en_US.twitter where the word 'love' appears
-# lhratio <-  length(grep("love", alltwitter, ignore.case = FALSE))/        length(grep("hate", alltwitter, ignore.case = FALSE))
-# q5text<- alltwitter[grep('biostats',alltwitter)]
-
-
-```
 
 
 ##Task 1 : Data acquisition and cleaning
@@ -77,7 +63,7 @@ I will build randomly generated vectors of indices.  For initial exploratory wor
 ```{r Read in prepared samples}
 
 
-tr.samp<-readRDS("Sample Data/trsamp.RDS")  # Read in hte corpus of prepared samples
+tr.samp<-readRDS("~/R/Capstone/Sample Data/trsamp.RDS")  # Read in hte corpus of prepared samples
 
 
 ```
@@ -110,7 +96,7 @@ clean<-function(x){
 
 clean.tr.samp <- clean(tr.samp)
 
-writeLines(clean.tr.samp[[1:100]]$content, "cleantext.txt")  #write out file for inspection
+# writeLines(clean.tr.samp[[1:100]]$content, "cleantext.txt")  #write out file for inspection
 
 ```
 
@@ -137,14 +123,15 @@ Tokenizer <- function(x) NGramTokenizer(x,
 
 blog.tdm <- TermDocumentMatrix(clean.tr.samp, control = list(tokenize = Tokenizer))
 
-freqtable<-data.table(Token     = blog.tdm$dimnames[[1]], Length = stri_count_words(blog.tdm$dimnames[[1]]),
-                      Frequency = blog.tdm$v)
-freqtable<-freqtable[-grep('\n',freqtable$Token),]  #remove terms containing a new line i.e. token that span sentences
+freqtable<-data.table(ngram = blog.tdm$dimnames$Terms[blog.tdm$i], Length = stri_count_words(blog.tdm$dimnames$Terms[blog.tdm$i]), Document = blog.tdm$j, Frequency = blog.tdm$v)
+a<-aggregate(freqtable$Frequency, list(freqtable$ngram), sum)
 
-freqtable<-freqtable[order(freqtable$Length,freqtable$Token,freqtable$Frequency),]
+# freqtable<-freqtable[-grep('\n',freqtable$Token),]  #remove terms containing a new line i.e. token that span sentences
 
-freqwords<-findFreqTerms(blog.tdm,lowfreq=5)
-freqtable<-freqtable[freqtable$Frequency>1,]  # remove ngrams with frequency of 1
+# freqtable<-freqtable[order(freqtable$Length,freqtable$Token,freqtable$Frequency),]
+# 
+# freqwords<-findFreqTerms(blog.tdm,lowfreq=5)
+# freqtable<-freqtable[freqtable$Frequency>1,]  # remove ngrams with frequency of 1
 
 
 ```
