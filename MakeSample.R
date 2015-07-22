@@ -1,6 +1,18 @@
-library("tm",    lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+# library("tm",    lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+# library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 
+### FILE INFO CALCUALTIONS
+datasize <- function(file) {
+  
+  if (!exists(file)) {
+  size <- object.size(file)
+  nlines <- length(file)
+  nwords <- sum(stri_count_words(file))}
+  
+  a<- list (size = size,linecount = nlines, wordcount = nwords)
+  
+  
+}
 
 corpSample<-function(n,size)
   #function  n samples of size% sample of the target files
@@ -21,23 +33,20 @@ corpSample<-function(n,size)
                         warn    = FALSE,
                         encoding= "UTF-8")
 
+sourcesize<- lapply(list(allblogs,allnews,alltwitter), datasize)
+
+  
+  
 
 set.seed(11051205)
 print(paste("Producing ",n," Sample(s), each representing ", as.character(size)," percent of the full text"))
 size      <- size/100  # what proportion of the file should the sample represent
-blogsize = n* round(size* length(allblogs))
-newssize = n* round(size* length(allnews))
-twittersize = n* round(size* length(alltwitter))
 
-blogs.inds      <-   sample(x      = length(allblogs), 
-                            size    = blogsize, 
-                            replace = FALSE)
-news.inds       <-   sample(x      = length(allnews), 
-                            size    = newssize,
-                            replace = FALSE)
-twitter.inds    <-   sample(x      = length(alltwitter), 
-                            size    = twittersize,
-                            replace = FALSE)
+blogsize = round(size* length(allblogs))
+newssize = round(size* length(allnews))
+twittersize = round(size* length(alltwitter))
+
+
 tr.blogs = ""
 tr.news = ""
 tr.twitter = ""
@@ -46,11 +55,19 @@ for (samp in 1:n) {
   
 #     tr.blogs[samp]<-""
 #    
+  blogs.inds      <-   sample(x      = sourcesize[[1]]$linecount, 
+                              size    = blogsize, 
+                              replace = FALSE)
+  news.inds       <-   sample(x      = sourcesize[[2]]$linecount, 
+                              size    = newssize,
+                              replace = FALSE)
+  twitter.inds    <-   sample(x      = sourcesize[[3]]$linecount, 
+                              size    = twittersize,
+                              replace = FALSE)
 
-
-    tr.blogs[samp]   = paste(allblogs[blogs.inds[((samp-1)*blogsize/n + 1) :        ((samp-1)*blogsize/n + blogsize/n)]],collapse = " ")
-    tr.news[samp]    = paste(allnews [news.inds [((samp-1)*newssize/n + 1) :        ((samp-1)*newssize/n + newssize/n)]],collapse = " ")
-    tr.twitter[samp] = paste(alltwitter [twitter.inds[((samp-1)*twittersize/n + 1) :   ((samp-1)*blogsize/n + twittersize/n)]],collapse = " ")
+    tr.blogs[samp]   = paste(allblogs[blogs.inds[((samp-1)*blogsize + 1) :        ((samp-1)*blogsize + blogsize)]],collapse = " ")
+    tr.news[samp]    = paste(allnews [news.inds [((samp-1)*newssize + 1) :        ((samp-1)*newssize + newssize)]],collapse = " ")
+    tr.twitter[samp] = paste(alltwitter [twitter.inds[((samp-1)*twittersize + 1) :   ((samp-1)*twittersize + twittersize)]],collapse = " ")
 }
 
 
