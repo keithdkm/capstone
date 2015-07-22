@@ -32,10 +32,13 @@ news.inds       <-   sample(x      = length(allnews),
 twitter.inds    <-   sample(x      = length(alltwitter), 
                             size    = round(n* size* length(alltwitter)),
                             replace = FALSE)
-
-tr.blogs   <- paste(allblogs[blogs.inds],collapse = " ")
-tr.news    <- paste(allnews [news.inds],collapse = " ")
-tr.twitter <- paste(alltwitter [twitter.inds],collapse = " ")
+for (samp in 0:n-1) {
+  
+start = samp*size+1;
+end   = start + size - 
+tr.blogs[samp]   <- paste(allblogs[blogs.inds[start:end]],collapse = " ")
+tr.news[samp]    <- paste(allnews [news.inds[start:end]],collapse = " ")
+tr.twitter[samp] <- paste(alltwitter [twitter.inds[start:end]],collapse = " ")}
 
 corp.blogs <- VCorpus(VectorSource(tr.blogs))
 corp.news <- VCorpus(VectorSource(tr.news))
