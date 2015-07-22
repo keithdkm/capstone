@@ -77,9 +77,9 @@ I will build randomly generated vectors of indices.  For initial exploratory wor
 ```{r Read in prepared samples}
 
 
-tr.blog<-readRDS("Sample Data/trsamp.RDS")
+tr.samp<-readRDS("Sample Data/trsamp.RDS")  # Read in hte corpus of prepared samples
 
-corp.blog <- VCorpus(VectorSource(tr.blog))
+
 ```
 ####How do we decide on sample size
 At what number of samples does the number of 1-grams stop increasing?
@@ -108,9 +108,9 @@ clean<-function(x){
   x<-tm_map(x, replacechars, '[ ][ ]+', " ")  #remove extra whitespace
 }
 
-clean.corp.blog <- clean(corp.blog)
+clean.tr.samp <- clean(tr.samp)
 
-writeLines(clean.corp.blog[[1]]$content, "cleantext.txt")  #write out file for inspection
+writeLines(clean.tr.samp[[1:100]]$content, "cleantext.txt")  #write out file for inspection
 
 ```
 
@@ -135,7 +135,7 @@ Tokenizer <- function(x) NGramTokenizer(x,
                                                      max = 4,
                                                      delimiters =" .\n"))
 
-blog.tdm <- TermDocumentMatrix(clean.corp.blog, control = list(tokenize = Tokenizer))
+blog.tdm <- TermDocumentMatrix(clean.tr.samp, control = list(tokenize = Tokenizer))
 
 freqtable<-data.table(Token     = blog.tdm$dimnames[[1]], Length = stri_count_words(blog.tdm$dimnames[[1]]),
                       Frequency = blog.tdm$v)
