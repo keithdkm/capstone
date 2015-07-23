@@ -54,13 +54,9 @@ twittersize = round(size* length(alltwitter))
 
 
 tr.samp = ""
-# tr.news = ""
-# tr.twitter = ""
 
 for (samp in 1:n) {
   
-#     tr.blogs[samp]<-""
-#    
   blogs.inds      <-   sample(x      = sourcesize[[1]]$linecount, 
                               size    = blogsize, 
                               replace = FALSE)
@@ -85,8 +81,6 @@ tr.samp <-VCorpus(VectorSource(tr.samp))
 
 
 saveRDS(tr.samp, file = "Sample Data/trsamp.RDS")
-# saveRDS(tr.news, file = "Sample Data/newssamp.RDS")
-# saveRDS(tr.twitter, file = "Sample Data/twittersamp.RDS")
 
 
 

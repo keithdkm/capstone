@@ -24,14 +24,14 @@ output: html_document
 - What is the relationship between NLP and the concepts you have learned in the Specialization?
 
 ```{r Libraries, warning=FALSE,message=FALSE}
-library("caret", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("e1071", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("tm",    lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("data.table", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("stringi", lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("stringr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("parallel", lib.loc="~/R/Capstone/packrat/lib-R")
+# library("caret", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+# library("e1071", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+# library("tm",    lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+# library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+# library("data.table", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+# library("stringi", lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+# library("stringr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+# library("parallel", lib.loc="~/R/Capstone/packrat/lib-R")
 
 setwd("~/R/Capstone")
 
@@ -77,7 +77,7 @@ At what number of samples does the number of 1-grams stop increasing?
 
 ```{r Clean data function}
 
-clean<-function(x){
+clean<-function(x,stopw){
 # This function removes cleans the data stream to clean the data streams.  Intitially we wil remove 
 # Remove any whitespace beyond a single space between words  
 
@@ -88,15 +88,21 @@ clean<-function(x){
   x<-tm_map(x,removeWords,profanity)
 
   
-# Remove certain characters  
-  con<-file("clean_text.txt","wt")
+ 
+  con<-file("clean_text.txt","wt")  #open file to send text samples to
   replacechars<-content_transformer(function(x,pattern,new) gsub(pattern, new, x))
   
   #replace all sentence ending chars with newline
   x<-tm_map(x, replacechars, '[.?!]+[ ]',              "\n") 
   writeLines("Replace sentence endings with newlines", con)
   writeLines(substring(x[[1]]$content,1,600),con)
- 
+  
+  #remove stopwords
+   x<-tm_map(x, removeWords, stopwords("en"))
+    writeLines("Remove stop words", con)
+    writeLines(substring(x[[1]]$content,1,600),con)
+
+  
   #remove apostrohes from contractions 
   x<-tm_map(x, replacechars, '[\'\`]',      "" )  
   writeLines("\nRemove apostrohes", con)
@@ -129,7 +135,7 @@ return(x)
   
   }
 
-clean.tr.samp <- clean(tr.samp)
+clean.tr.samp <- clean(tr.samp,TRUE)
 
 
 ```
@@ -150,15 +156,21 @@ clean.tr.samp <- clean(tr.samp)
 ```{r Tokenize the data}
 #Take the cleaned corpus and Tokenize it into 1gram, 2grams and 3grams.
 
-Tokenizer <- function(x) NGramTokenizer(x, 
+Tokenizer_1 <- function(x) NGramTokenizer(x, 
                                         Weka_control(min = 1, 
-                                                     max = 3,
+                                                     max = 1,
                                                      delimiters =" .\n"))
+Tokenizer_n <- function(x) NGramTokenizer(x, 
+                                        Weka_control(min = 2, 
+                                                     max = 5,
+                                                     delimiters =" .\n"))
+tdm <- removeSparseTerms(TermDocumentMatrix(clean.tr.samp, control = list(tokenize = Tokenizer)),0.9)
+tdm2<-as.matrix(tdm)
+a<-data.table(row.names(tdm2),rowSums(tdm2))
 
-tdm <- TermDocumentMatrix(clean.tr.samp, control = list(tokenize = Tokenizer))
 
-freqtable<-data.table(ngram = tdm$dimnames$Terms[tdm$i], Length = stri_count_words(tdm$dimnames$Terms[tdm$i]), Document = tdm$j, Frequency = tdm$v)
-a<-aggregate(freqtable$Frequency, list(freqtable$ngram), sum)
+# freqtable<-data.table(ngram = tdm$dimnames$Terms[tdm$i], Length = stri_count_words(tdm$dimnames$Terms[tdm$i]), Document = tdm$j, Frequency = tdm$v)
+# a<-aggregate(freqtable$Frequency, list(freqtable$ngram), sum)
 
 # freqtable<-freqtable[-grep('\n',freqtable$Token),]  #remove terms containing a new line i.e. token that span sentences
 
@@ -172,6 +184,16 @@ a<-aggregate(freqtable$Frequency, list(freqtable$ngram), sum)
 
 
 ##Task 2: Exploratory Data Analysis
+
+###
+1. Exploratory analysis - perform a thorough exploratory analysis of the data, understanding the distribution of words and relationship between the words in the corpora. 
+2. Understand frequencies of words and word pairs - build figures and tables to understand variation in the frequencies of words and word pairs in the data.
+
+Some words are more frequent than others - what are the distributions of word frequencies? 
+What are the frequencies of 2-grams and 3-grams in the dataset? 
+How many unique words do you need in a frequency sorted dictionary to cover 50% of all word instances in the language? 90%? 
+How do you evaluate how many of the words come from foreign languages? 
+Can you think of a way to increase the coverage -- identifying words that may not be in the corpora or using a smaller number of words in the dictionary to cover the same number of phrases?
 
 ##Task 3: Modelling
 
