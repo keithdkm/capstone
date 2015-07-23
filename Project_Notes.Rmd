@@ -30,6 +30,9 @@ library("tm",    lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("data.table", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("stringi", lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("stringr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("parallel", lib.loc="~/R/Capstone/packrat/lib-R")
+
 setwd("~/R/Capstone")
 
 options(mc.cores=4)
@@ -84,19 +87,50 @@ clean<-function(x){
   close(con)
   x<-tm_map(x,removeWords,profanity)
 
-# Remove certain characters    
+  
+# Remove certain characters  
+  con<-file("clean_text.txt","wt")
   replacechars<-content_transformer(function(x,pattern,new) gsub(pattern, new, x))
-  x<-tm_map(x, replacechars, '[.?!]+[ ]',              "\n")  #replace all sentence ending chars with newline
-  x<-tm_map(x, replacechars, '[\'\`]',      "" )  #remove apostrohes from contractions 
-  x<-tm_map(x, replacechars, '[0-9()\"“”:;]', ".") #All other stop characters and numerics replace with a period
-  x<-tm_map(x, replacechars, '[^a-zA-Z. \n]',         "")  #remove all other unknown chars
-  x<-tm_map(x, replacechars, '[ ][^AaIi\n][ ]',       ".")  #Remove single letters that are not valid single letters
-  x<-tm_map(x, replacechars, '[ ][ ]+', " ")  #remove extra whitespace
-}
+  
+  #replace all sentence ending chars with newline
+  x<-tm_map(x, replacechars, '[.?!]+[ ]',              "\n") 
+  writeLines("Replace sentence endings with newlines", con)
+  writeLines(substring(x[[1]]$content,1,600),con)
+ 
+  #remove apostrohes from contractions 
+  x<-tm_map(x, replacechars, '[\'\`]',      "" )  
+  writeLines("\nRemove apostrohes", con)
+  writeLines(substring(x[[1]]$content,1,600),con)
+  
+#   x<-tm_map(x, replacechars, '[@][a-zA-Z]+',"\n")  #remove twitter names
+#   x<-tm_map(x, replacechars, '[#][a-zA-Z]+',"\n")  #remove twitter hashtags
+  
+  #All other stop characters and numerics replace with a period
+  x<-tm_map(x, replacechars, '[0-9()\"“”:;,]', ".") 
+  writeLines("\nRemove other stop chararcters", con)
+  writeLines(substring(x[[1]]$content,1,600),con)
+  
+  #remove all other unknown chars 
+  x<-tm_map(x, replacechars, '[^a-zA-Z. \n]',         "")  
+  writeLines("\nRemove other unknown chararcters", con)
+  writeLines(substring(x[[1]]$content,1,600),con)
+  
+  #Remove single letters that are not valid single letters 
+  x<-tm_map(x, replacechars, '[ ][^AaIi\n][ ]',       ".") 
+  writeLines("\nRemove invalid single chars", con)
+  writeLines(substring(x[[1]]$content,1,600),con)
+  
+  #remove extra whitespace 
+  x<-tm_map(x, replacechars, '[ ][ ]+', " ") 
+  writeLines("\nRemove additional whitespace", con)
+  writeLines(substring(x[[1]]$content,1,600),con)
+  close(con)
+return(x)
+  
+  }
 
 clean.tr.samp <- clean(tr.samp)
 
-# writeLines(clean.tr.samp[[1:100]]$content, "cleantext.txt")  #write out file for inspection
 
 ```
 
@@ -118,12 +152,12 @@ clean.tr.samp <- clean(tr.samp)
 
 Tokenizer <- function(x) NGramTokenizer(x, 
                                         Weka_control(min = 1, 
-                                                     max = 4,
+                                                     max = 3,
                                                      delimiters =" .\n"))
 
-blog.tdm <- TermDocumentMatrix(clean.tr.samp, control = list(tokenize = Tokenizer))
+tdm <- TermDocumentMatrix(clean.tr.samp, control = list(tokenize = Tokenizer))
 
-freqtable<-data.table(ngram = blog.tdm$dimnames$Terms[blog.tdm$i], Length = stri_count_words(blog.tdm$dimnames$Terms[blog.tdm$i]), Document = blog.tdm$j, Frequency = blog.tdm$v)
+freqtable<-data.table(ngram = tdm$dimnames$Terms[tdm$i], Length = stri_count_words(tdm$dimnames$Terms[tdm$i]), Document = tdm$j, Frequency = tdm$v)
 a<-aggregate(freqtable$Frequency, list(freqtable$ngram), sum)
 
 # freqtable<-freqtable[-grep('\n',freqtable$Token),]  #remove terms containing a new line i.e. token that span sentences

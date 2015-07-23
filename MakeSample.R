@@ -1,5 +1,7 @@
-# library("tm",    lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-# library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("tm",    lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("stringi", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+
 
 ### FILE INFO CALCUALTIONS
 datasize <- function(file) {
@@ -9,6 +11,7 @@ datasize <- function(file) {
   nlines <- length(file)
   nwords <- sum(stri_count_words(file))}
   
+  
   a<- list (size = size,linecount = nlines, wordcount = nwords)
   
   
@@ -17,16 +20,19 @@ datasize <- function(file) {
 corpSample<-function(n,size)
   #function  n samples of size% sample of the target files
 {setwd("~/R/Capstone")
-  allblogs<-readLines("Initial Dataset/final/en_US/en_US.blogs.txt",
+  # if (!exists(allblogs) ) 
+            allblogs<-readLines("Initial Dataset/final/en_US/en_US.blogs.txt",
                       n       = -1,
                       skipNul = TRUE, 
                       warn    = FALSE,
                       encoding= "UTF-8")
+  # if (!exists(allnews) ) 
   allnews<-readLines("Initial Dataset/final/en_US/en_US.news.txt", 
                      n       = -1,
                      skipNul = TRUE, 
                      warn    = FALSE ,
                      encoding= "UTF-8")
+  # if (!exists(alltwitter) ) 
   alltwitter<-readLines("Initial Dataset/final/en_US/en_US.twitter.txt",
                         n       = -1,
                         skipNul = TRUE, 
@@ -47,9 +53,9 @@ newssize = round(size* length(allnews))
 twittersize = round(size* length(alltwitter))
 
 
-tr.blogs = ""
-tr.news = ""
-tr.twitter = ""
+tr.samp = ""
+# tr.news = ""
+# tr.twitter = ""
 
 for (samp in 1:n) {
   
@@ -65,21 +71,16 @@ for (samp in 1:n) {
                               size    = twittersize,
                               replace = FALSE)
 
-    tr.blogs[samp]   = paste(allblogs[blogs.inds[((samp-1)*blogsize + 1) :        ((samp-1)*blogsize + blogsize)]],collapse = " ")
-    tr.news[samp]    = paste(allnews [news.inds [((samp-1)*newssize + 1) :        ((samp-1)*newssize + newssize)]],collapse = " ")
-    tr.twitter[samp] = paste(alltwitter [twitter.inds[((samp-1)*twittersize + 1) :   ((samp-1)*twittersize + twittersize)]],collapse = " ")
+  tr.samp[samp]   = paste(paste(allblogs[blogs.inds],collapse = " "),
+                          paste(allnews [news.inds],collapse = " "),
+                          paste(alltwitter [twitter.inds],collapse = " "), collapse = " ")
+
 }
 
 
-corp.blogs <- VCorpus(VectorSource(tr.blogs))
-corp.news <- VCorpus(VectorSource(tr.news))
-corp.twitter <- VCorpus(VectorSource(tr.twitter))
 
-meta(corp.blogs, tag = "origin") <- "blog"
-meta(corp.news, tag = "origin") <- "news"
-meta(corp.twitter, tag = "origin") <- "twitter"
 
-tr.samp <-c(corp.blogs,corp.news,corp.twitter)
+tr.samp <-VCorpus(VectorSource(tr.samp))
 
 
 
