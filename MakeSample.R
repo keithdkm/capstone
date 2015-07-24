@@ -171,3 +171,35 @@ Tokenizer_3 <- function(x) NGramTokenizer(x,
                                           Weka_control(min = 3, 
                                                        max = 3,
                                                        delimiters =" .\n"))
+
+
+ngramcoverage<-function(tdm,n) {
+  
+  tdm<-as.matrix(tdm)
+  
+  word.freq<-data.table(ngram = row.names(tdm), frequency = rowSums(tdm))
+  
+  word.freq<-setorder(word.freq, -frequency)
+  
+  word_count <-sum(word.freq$frequency)
+  
+  word.freq<-word.freq[,':='(probability = word.freq$frequency/word_count,
+                             coverage  = round(100*cumsum(word.freq$frequency)/word_count,3),
+                             n         = n)]
+  
+  g<-qplot(x = 1:nrow(word.freq),
+           y = word.freq$coverage,
+           main = "Coverage", 
+           xlab = "No. of words in Dictionary", 
+           ylab = "Percentage Document Sample Coverage () ")
+  
+  dictionary10<-word.freq[coverage<=10,ngram]
+  cover10<-length(dictionary10)
+  dictionary50<-word.freq[coverage<=50,ngram]
+  cover50 <- length(dictionary50)
+  dictionary90<-word.freq[coverage<=90,ngram]
+  cover90<- length(dictionary90)
+  
+  list(freqtable = word.freq, coverageplot = g, cover50 = cover50, cover90 = cover90  )
+  
+}

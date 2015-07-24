@@ -111,25 +111,6 @@ The following cleaning steps were performed :
 #Calculate 1-gram word frequencies
 tdm <- TermDocumentMatrix(clean.tr.samp, control = list(tokenize = Tokenizer_2 ))
                           
-tdm<-as.matrix(tdm)
-
-word.freq<-data.table(ngram = row.names(tdm), frequency = rowSums(tdm))
-
-word.freq<-setorder(word.freq, -frequency)
-
-word_count <-sum(word.freq$frequency)
-
-word.freq<-word.freq[,coverage:=round(100*cumsum(word.freq$frequency)/word_count,3)]
-
-g<-qplot(x = 1:nrow(word.freq),y = word.freq$coverage,main = "Coverage", xlab = "No. of words in Dictionary", ylab = "Percentage Document Sample Coverage () ",type = "line")
-print(g)
-dict<-word.freq[coverage<=10,ngram]
-cover10<-length(dictionary10)
-dictionary50<-word.freq[coverage<=50,ngram]
-cover50 <- length(dictionary50)
-dictionary90<-word.freq[coverage<=90,ngram]
-cover90<- length(dictionary90)
-
 
 
 ```
