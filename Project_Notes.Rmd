@@ -24,14 +24,15 @@ output: html_document
 - What is the relationship between NLP and the concepts you have learned in the Specialization?
 
 ```{r Libraries, warning=FALSE,message=FALSE}
-# library("caret", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-# library("e1071", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-# library("tm",    lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-# library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-# library("data.table", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-# library("stringi", lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-# library("stringr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-# library("parallel", lib.loc="~/R/Capstone/packrat/lib-R")
+library("caret", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("e1071", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("tm",    lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("data.table", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("stringi", lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("stringr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("parallel", lib.loc="~/R/Capstone/packrat/lib-R")
+source('~/R/Capstone/MakeSample.R', encoding = 'UTF-8')
 
 setwd("~/R/Capstone")
 
@@ -52,95 +53,45 @@ I decided to read in all the data first and use R to explore the dataset.  My pl
 
 One piece of manual clean up was performed on the en_US.news.txt file.  A SUB character was removed with a text editor.  It was located in line 77259 between the words 1 and gallons. 
 
+```{r Load the data,echo=FALSE, results = "as.is"}
+
+load.data()
+
+```
 
 
 ##Task 1 : Data acquisition and cleaning
 
 
-
 ###Sample the data
-The datasets that we have available are large so for initial data cleaning, exploratory data analysis, statistical analysis and model development we shall use a small fraction of the data.   The approach will be to take many  samples of several thousand lines.  We will then average the n-gram frequencies of these samples to approximate the popualtion frequency. 
+The datasets that we have available are large so for initial data cleaning, exploratory data analysis, statistical analysis and model development we shall use a small fraction of the data.   The approach will be to take many  samples of several thousand lines.  Some experimentation will be required to see decide a good sampling schema.  My initaal goal is to have a sufficiently large sample that we can distinguish the relative probabilitiesof 90-95% of single words, not including English stopwords
 
-####What sampling technique should we use?
-I will build randomly generated vectors of indices.  For initial exploratory work just one sample will be generated from each file
+####How do we decide on sample size
+My approach to sampling will be to experiment with the number of samples and what proportion of the source text those samples represent.  I will build randomly generated vectors of indices to select random lines of text from all three source types, concatenate together all of the returned lines of text and store them as vectors in RDS files for easy re-use
+
+
 ```{r Read in prepared samples}
 
-
-tr.samp<-readRDS("~/R/Capstone/Sample Data/trsamp.RDS")  # Read in hte corpus of prepared samples
-
+tr.samp<-readRDS("~/R/Capstone/Sample Data/trsamp_10_10.RDS")  # Read in hte corpus of prepared samples
+tr.samp <-VCorpus(VectorSource(tr.samp))
 
 ```
-####How do we decide on sample size
-At what number of samples does the number of 1-grams stop increasing?
+
+
 
 ###Cleaning the data
 
 ```{r Clean data function}
 
-clean<-function(x,stopw){
-# This function removes cleans the data stream to clean the data streams.  Intitially we wil remove 
-# Remove any whitespace beyond a single space between words  
 
-# Remove any words appearing on Google's list of profane words  
-  con<-file("Required Data/dirty.txt",'r')
-  profanity<-readLines(con)
-  close(con)
-  x<-tm_map(x,removeWords,profanity)
-
-  
- 
-  con<-file("clean_text.txt","wt")  #open file to send text samples to
-  replacechars<-content_transformer(function(x,pattern,new) gsub(pattern, new, x))
-  
-  #replace all sentence ending chars with newline
-  x<-tm_map(x, replacechars, '[.?!]+[ ]',              "\n") 
-  writeLines("Replace sentence endings with newlines", con)
-  writeLines(substring(x[[1]]$content,1,600),con)
-  
-  #remove stopwords
-   x<-tm_map(x, removeWords, stopwords("en"))
-    writeLines("Remove stop words", con)
-    writeLines(substring(x[[1]]$content,1,600),con)
-
-  
-  #remove apostrohes from contractions 
-  x<-tm_map(x, replacechars, '[\'\`]',      "" )  
-  writeLines("\nRemove apostrohes", con)
-  writeLines(substring(x[[1]]$content,1,600),con)
-  
-#   x<-tm_map(x, replacechars, '[@][a-zA-Z]+',"\n")  #remove twitter names
-#   x<-tm_map(x, replacechars, '[#][a-zA-Z]+',"\n")  #remove twitter hashtags
-  
-  #All other stop characters and numerics replace with a period
-  x<-tm_map(x, replacechars, '[0-9()\"“”:;,]', ".") 
-  writeLines("\nRemove other stop chararcters", con)
-  writeLines(substring(x[[1]]$content,1,600),con)
-  
-  #remove all other unknown chars 
-  x<-tm_map(x, replacechars, '[^a-zA-Z. \n]',         "")  
-  writeLines("\nRemove other unknown chararcters", con)
-  writeLines(substring(x[[1]]$content,1,600),con)
-  
-  #Remove single letters that are not valid single letters 
-  x<-tm_map(x, replacechars, '[ ][^AaIi\n][ ]',       ".") 
-  writeLines("\nRemove invalid single chars", con)
-  writeLines(substring(x[[1]]$content,1,600),con)
-  
-  #remove extra whitespace 
-  x<-tm_map(x, replacechars, '[ ][ ]+', " ") 
-  writeLines("\nRemove additional whitespace", con)
-  writeLines(substring(x[[1]]$content,1,600),con)
-  close(con)
-return(x)
-  
-  }
-
-clean.tr.samp <- clean(tr.samp,TRUE)
-
+clean.tr.samp <- clean(tr.samp,FALSE)
 
 ```
 
-####Blog Data Cleaning Approach
+#### Data Cleaning Approach
+
+The following cleaning steps were performed :
+- Replace any characters that would "break" an n-gram run with a period so that the tokenizere won't identify the words on eother side of the character as as ngram
 - Remove foreign characters  Yes
 - Identify sentences Yes
 - Remove proper nouns-  no but they are converted to lower case.  it is assumed that they will be infrequent enough not to matter.  
@@ -156,28 +107,29 @@ clean.tr.samp <- clean(tr.samp,TRUE)
 ```{r Tokenize the data}
 #Take the cleaned corpus and Tokenize it into 1gram, 2grams and 3grams.
 
-Tokenizer_1 <- function(x) NGramTokenizer(x, 
-                                        Weka_control(min = 1, 
-                                                     max = 1,
-                                                     delimiters =" .\n"))
-Tokenizer_n <- function(x) NGramTokenizer(x, 
-                                        Weka_control(min = 2, 
-                                                     max = 5,
-                                                     delimiters =" .\n"))
-tdm <- removeSparseTerms(TermDocumentMatrix(clean.tr.samp, control = list(tokenize = Tokenizer)),0.9)
-tdm2<-as.matrix(tdm)
-a<-data.table(row.names(tdm2),rowSums(tdm2))
 
+#Calculate 1-gram word frequencies
+tdm <- TermDocumentMatrix(clean.tr.samp, control = list(tokenize = Tokenizer_2 ))
+                          
+tdm<-as.matrix(tdm)
 
-# freqtable<-data.table(ngram = tdm$dimnames$Terms[tdm$i], Length = stri_count_words(tdm$dimnames$Terms[tdm$i]), Document = tdm$j, Frequency = tdm$v)
-# a<-aggregate(freqtable$Frequency, list(freqtable$ngram), sum)
+word.freq<-data.table(ngram = row.names(tdm), frequency = rowSums(tdm))
 
-# freqtable<-freqtable[-grep('\n',freqtable$Token),]  #remove terms containing a new line i.e. token that span sentences
+word.freq<-setorder(word.freq, -frequency)
 
-# freqtable<-freqtable[order(freqtable$Length,freqtable$Token,freqtable$Frequency),]
-# 
-# freqwords<-findFreqTerms(blog.tdm,lowfreq=5)
-# freqtable<-freqtable[freqtable$Frequency>1,]  # remove ngrams with frequency of 1
+word_count <-sum(word.freq$frequency)
+
+word.freq<-word.freq[,coverage:=round(100*cumsum(word.freq$frequency)/word_count,3)]
+
+g<-qplot(x = 1:nrow(word.freq),y = word.freq$coverage,main = "Coverage", xlab = "No. of words in Dictionary", ylab = "Percentage Document Sample Coverage () ",type = "line")
+print(g)
+dict<-word.freq[coverage<=10,ngram]
+cover10<-length(dictionary10)
+dictionary50<-word.freq[coverage<=50,ngram]
+cover50 <- length(dictionary50)
+dictionary90<-word.freq[coverage<=90,ngram]
+cover90<- length(dictionary90)
+
 
 
 ```
