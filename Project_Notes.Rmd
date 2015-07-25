@@ -36,7 +36,7 @@ source('~/R/Capstone/MakeSample.R', encoding = 'UTF-8')
 
 setwd("~/R/Capstone")
 
-options(mc.cores=4)
+
 
 ```
 
@@ -55,7 +55,11 @@ One piece of manual clean up was performed on the en_US.news.txt file.  A SUB ch
 
 ```{r Load the data,echo=FALSE, results = "as.is"}
 
-load.data()
+n<-3
+
+size <- 0.1
+
+corpSample(n,size)
 
 ```
 
@@ -72,8 +76,12 @@ My approach to sampling will be to experiment with the number of samples and wha
 
 ```{r Read in prepared samples}
 
-tr.samp<-readRDS("~/R/Capstone/Sample Data/trsamp_10_10.RDS")  # Read in hte corpus of prepared samples
-tr.samp <-VCorpus(VectorSource(tr.samp))
+# file.name<-paste0("Sample Data/trsamp_",n,"_",as.character(size),".RDS")
+# 
+# tr.samp<-readRDS(file.name)  # Read in hte corpus of prepared samples
+
+
+
 
 ```
 
@@ -84,7 +92,7 @@ tr.samp <-VCorpus(VectorSource(tr.samp))
 ```{r Clean data function}
 
 
-clean.tr.samp <- clean(tr.samp,FALSE)
+# clean.tr.samp <- clean(tr.samp,FALSE)
 
 ```
 
@@ -108,9 +116,29 @@ The following cleaning steps were performed :
 #Take the cleaned corpus and Tokenize it into 1gram, 2grams and 3grams.
 
 
-#Calculate 1-gram word frequencies
-tdm <- TermDocumentMatrix(clean.tr.samp, control = list(tokenize = Tokenizer_2 ))
-                          
+#Aggregate ngram frequencies for all the samples
+
+
+ngramfreq<-data.table(ngram = "")
+
+for (i in 1:n) {
+  
+file.name<-paste0("Sample Data/trsamp_",i,"_",as.character(size),".RDS")
+
+tr.samp<-readRDS(file.name)  # Read in hte corpus of prepared samples
+
+clean.tr.samp <- clean(tr.samp,FALSE); rm(tr.samp)
+
+tdm <- TermDocumentMatrix(clean.tr.samp, control = list(tokenize = Tokenizer_3 ))
+
+y<-ngramcoverage(tdm); rm(tdm)
+
+ngramfreq <- merge (x = ngramfreq, y = y , by = "ngram", all = TRUE, suffixes = as.character(i) )
+
+}
+
+
+
 
 
 ```
@@ -122,13 +150,9 @@ tdm <- TermDocumentMatrix(clean.tr.samp, control = list(tokenize = Tokenizer_2 )
 1. Exploratory analysis - perform a thorough exploratory analysis of the data, understanding the distribution of words and relationship between the words in the corpora. 
 2. Understand frequencies of words and word pairs - build figures and tables to understand variation in the frequencies of words and word pairs in the data.
 
-Some words are more frequent than others - what are the distributions of word frequencies? 
-What are the frequencies of 2-grams and 3-grams in the dataset? 
-How many unique words do you need in a frequency sorted dictionary to cover 50% of all word instances in the language? 90%? 
 How do you evaluate how many of the words come from foreign languages? 
 Can you think of a way to increase the coverage -- identifying words that may not be in the corpora or using a smaller number of words in the dictionary to cover the same number of phrases?
 
-##Task 3: Modelling
 
 
 ###Question to Consider

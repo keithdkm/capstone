@@ -1,10 +1,16 @@
+##REquired libraries
+library("stringi", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("tm", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+
 
 ### FILE INFO CALCUALTIONS
 datasize <- function(file) {
   
-  
   size <- object.size(file)
+  
   nlines <- length(file)
+  
   nwords <- sum(stri_count_words(file))
   
   a<- list ( size = size,linecount = nlines, wordcount = nwords)
@@ -12,8 +18,14 @@ datasize <- function(file) {
   
 }
 
+
+
+
+
+# function checkes to see if original source files are loaded and loads them if required
+
 load.data<-function(){
-  # function checkes to see if original source files are loaded and loads them if required
+ 
 setwd("~/R/Capstone")
   if (!exists("allblogs",where = .GlobalEnv
               )) {
@@ -33,7 +45,7 @@ setwd("~/R/Capstone")
                      warn    = FALSE ,
                      encoding= "UTF-8")
   print("News data loaded")
-  print(datasize(allnews)) }
+  print(unlist(datasize(allnews))) }
   
   
   if (!exists("alltwitter")) {
@@ -44,76 +56,95 @@ setwd("~/R/Capstone")
                         encoding= "UTF-8")
 
   print("Twitter data loaded")
-  print(datasize(alltwitter))}
+  print(unlist(datasize(alltwitter)))}
 }
 
   
-  
+
   
   ##function to generate n samples of size% of the entire dataset
   
 corpSample<-function(n,size)  {
 
-set.seed(11051205)
-print(paste("Producing ",n," Sample(s), each representing ", as.character(size)," percent of the full text"))
-size      <- size/100  # what proportion of the file should the sample represent
-
-blogsize = round(size* length(allblogs))
-newssize = round(size* length(allnews))
-twittersize = round(size* length(alltwitter))
-
-
-tr.samp = ""
-
-for (samp in 1:n) {
+  load.data()
   
-  blogs.inds      <-   sample(x      = length(allblogs), 
-                              size    = blogsize, 
-                              replace = FALSE)
-  news.inds       <-   sample(x      = length(allnews), 
-                              size    = newssize,
-                              replace = FALSE)
-  twitter.inds    <-   sample(x      = length(alltwitter), 
-                              size    = twittersize,
-                              replace = FALSE)
+  setwd("~/R/Capstone")
 
-  tr.samp[samp]   = iconv(paste(paste(allblogs[blogs.inds],collapse = " "),
-                          paste(allnews [news.inds],collapse = " "),
-                          paste(alltwitter [twitter.inds],collapse = " "), collapse = " "))
+  if(!dir.exists("Sample Data")) dir.create("Sample Data")
+  
+  size      <- size/100  # what proportion of the file should the sample represent
 
+  blogsize    = round(size * length(allblogs))
+  newssize    = round(size * length(allnews))
+  twittersize = round(size * length(alltwitter))
+
+
+  set.seed(11051205)
+  
+  for (samp in 1:n) {
+    
+    blogs.inds      <-   sample(x      = length(allblogs), 
+                                size    = blogsize, 
+                                replace = FALSE)
+    news.inds       <-   sample(x      = length(allnews), 
+                                size    = newssize,
+                                replace = FALSE)
+    twitter.inds    <-   sample(x      = length(alltwitter), 
+                                size    = twittersize,
+                                replace = FALSE)
+    
+    tr.samp  = 
+            
+            iconv(paste(paste(allblogs[blogs.inds],collapse = " "),
+                        paste(allnews [news.inds],collapse = " "),
+                        paste(alltwitter [twitter.inds],collapse = " "), collapse = " "))
+    
+    
+    file.name<-paste0("Sample Data/trsamp_",samp,"_",size*100,".RDS")
+    
+    saveRDS(VCorpus(VectorSource(tr.samp)), file = file.name)
+    
+    }
+
+# tr.samp <- list(n = n, size = size, sample = tr.samp)
+# 
+# 
+# file.name<-paste0("Sample Data/trsamp_",n,"_",size,".RDS")
+# 
+# saveRDS(tr.samp, file = file.name)
+  print(paste("Saved ",n," Sample Corpuses, each representing ", as.character(size*100)," percent of the full text"))
+  
 }
 
 
-#tr.samp <-VCorpus(VectorSource(tr.samp))
 
-file.name<-paste0("Sample Data/trsamp_",n,"_",size*1000,".RDS")
-
-saveRDS(tr.samp, file = file.name)
-
-
-
-}
+# This function removes cleans the data stream to clean the data streams.  Intitially we wil remove 
+# Remove any whitespace beyond a single space between words  
 
 clean<-function(x,stopw){
-  # This function removes cleans the data stream to clean the data streams.  Intitially we wil remove 
-  # Remove any whitespace beyond a single space between words  
+  
+  con<-file("clean_text.txt","wt")
+  writeLines("\nRAW TEXT", con)
+  writeLines(substring(x[[1]]$content,1,600),con)
+  
   
   # Remove any words appearing on Google's list of profane words  
-  con<-file("Required Data/dirty.txt",'r')
-  profanity<-readLines(con)
-  close(con)
+  conf<-file("Required Data/dirty.txt",'r')
+  profanity<-readLines(conf)
+  close(conf)
   x<-tm_map(x,removeWords,profanity)
   
-  con<-file("clean_text.txt","wt")  #open file to send text samples to
+    #open file to send text samples to
   replacechars<-content_transformer(function(x,pattern,new) gsub(pattern, new, x))
   
   #convert to Lower
   x<-tm_map(x,content_transformer(tolower))
   
   #remove stopwords
-  x<-tm_map(x, removeWords, stopwords("en"))
-  writeLines("\nRemove stop words", con)
-  writeLines(c(x[[1]]$content,x[[2]]$content),con)
+  if (stopw) {
+    x<-tm_map(x, removeWords, stopwords("en"))
+    writeLines("\nRemove stop words", con)
+    writeLines(substring(x[[1]]$content,1,600),con)}
   
   #replace all sentence ending chars with newline
   x<-tm_map(x, replacechars, '[.?!]+[ ]',              "\n") 
@@ -168,38 +199,44 @@ Tokenizer_2 <- function(x) NGramTokenizer(x,
 
 #Tokenizer control function for 2grams, 3grams
 Tokenizer_3 <- function(x) NGramTokenizer(x, 
-                                          Weka_control(min = 3, 
+                                          Weka_control(min = 1, 
                                                        max = 3,
                                                        delimiters =" .\n"))
 
 
-ngramcoverage<-function(tdm,n) {
+
+#Returns relative frequency of each of the ngram in a TDM 
+ngramcoverage<-function(tdm) {
   
   tdm<-as.matrix(tdm)
   
   word.freq<-data.table(ngram = row.names(tdm), frequency = rowSums(tdm))
   
-  word.freq<-setorder(word.freq, -frequency)
+  #word.freq<-setorder(word.freq, -frequency)
   
   word_count <-sum(word.freq$frequency)
+
+  word.freq<-word.freq[,':='(probability = word.freq$frequency/word_count
+#                              ,
+#                              coverage    = round(100*cumsum(word.freq$frequency)/word_count,3)
+                             )]
   
-  word.freq<-word.freq[,':='(probability = word.freq$frequency/word_count,
-                             coverage  = round(100*cumsum(word.freq$frequency)/word_count,3),
-                             n         = n)]
+#   g<-qplot(x = 1:nrow(word.freq),
+#            y = word.freq$coverage,
+#            main = "Coverage", 
+#            xlab = "No. of words in Dictionary", 
+#            ylab = "Percentage Document Sample Coverage () ")
   
-  g<-qplot(x = 1:nrow(word.freq),
-           y = word.freq$coverage,
-           main = "Coverage", 
-           xlab = "No. of words in Dictionary", 
-           ylab = "Percentage Document Sample Coverage () ")
+#   dictionary10<-word.freq[coverage<=10,ngram]
+#   cover10<-length(dictionary10)
+#   dictionary50<-word.freq[coverage<=50,ngram]
+#   cover50 <- length(dictionary50)
+#   dictionary90<-word.freq[coverage<=90,ngram]
+#   cover90<- length(dictionary90)
   
-  dictionary10<-word.freq[coverage<=10,ngram]
-  cover10<-length(dictionary10)
-  dictionary50<-word.freq[coverage<=50,ngram]
-  cover50 <- length(dictionary50)
-  dictionary90<-word.freq[coverage<=90,ngram]
-  cover90<- length(dictionary90)
-  
-  list(freqtable = word.freq, coverageplot = g, cover50 = cover50, cover90 = cover90  )
-  
+  # list(freqtable = word.freq,  cover50 = cover50, cover90 = cover90  )
+  word.freq
 }
+
+
+
