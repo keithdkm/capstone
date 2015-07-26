@@ -29,31 +29,31 @@ load.data<-function(){
 setwd("~/R/Capstone")
   if (!exists("allblogs",where = .GlobalEnv
               )) {
-            allblogs<<-readLines("Initial Dataset/final/en_US/en_US.blogs.txt",
+            allblogs<<- iconv(readLines("Initial Dataset/final/en_US/en_US.blogs.txt",
                       n       = -1,
                       skipNul = TRUE, 
                       warn    = FALSE,
-                      encoding= "UTF-8"); 
+                      encoding= "UTF-8"))
   print("Blog data loaded")
   print(unlist(datasize(allblogs))) }
   
   
   if (!exists("allnews")) { 
-  allnews<<-readLines("Initial Dataset/final/en_US/en_US.news.txt", 
+  allnews<<- iconv(readLines("Initial Dataset/final/en_US/en_US.news.txt", 
                      n       = -1,
                      skipNul = TRUE, 
                      warn    = FALSE ,
-                     encoding= "UTF-8")
+                     encoding= "UTF-8"))
   print("News data loaded")
   print(unlist(datasize(allnews))) }
   
   
   if (!exists("alltwitter")) {
-  alltwitter<<-readLines("Initial Dataset/final/en_US/en_US.twitter.txt",
+  alltwitter<<- iconv(readLines("Initial Dataset/final/en_US/en_US.twitter.txt",
                         n       = -1,
                         skipNul = TRUE, 
                         warn    = FALSE,
-                        encoding= "UTF-8")
+                        encoding= "UTF-8"))
 
   print("Twitter data loaded")
   print(unlist(datasize(alltwitter)))}
@@ -66,6 +66,7 @@ setwd("~/R/Capstone")
   
 corpSample<-function(n,size)  {
 
+  #if needed, load the data into the environment
   load.data()
   
   setwd("~/R/Capstone")
@@ -82,33 +83,38 @@ corpSample<-function(n,size)  {
 
   set.seed(11051205)
   
-  for (samp in 1:n) {
+  
     
-    blogs.inds      <-   sample(x      = length(allblogs), 
-                                size    = blogsize, 
-                                replace = FALSE)
-    news.inds       <-   sample(x      = length(allnews), 
-                                size    = newssize,
-                                replace = FALSE)
-    twitter.inds    <-   sample(x      = length(alltwitter), 
-                                size    = twittersize,
-                                replace = FALSE)
+    blogs.inds      <-   matrix(sample(x  = length(allblogs), 
+                                 size    = n * blogsize, 
+                                replace = FALSE), nrow = n , ncol = blogsize)
     
+    news.inds       <-   matrix(sample(x  = length(allnews), 
+                                       size    = n * newssize, 
+                                       replace = FALSE), nrow = n , ncol = newssize)
+    twitter.inds    <-   matrix(sample(x  = length(alltwitter), 
+                                       size    = n * twittersize, 
+                                       replace = FALSE), nrow = n , ncol = twittersize)
+    for (i in 1:n){
     tr.samp  = 
             
-            iconv(paste(paste(allblogs[blogs.inds],collapse = " "),
-                        paste(allnews [news.inds],collapse = " "),
-                        paste(alltwitter [twitter.inds],collapse = " "), collapse = " "))
+            paste(paste(allblogs[blogs.inds[i,]],collapse = " "),
+                        paste(allnews [news.inds[i,]],collapse = " "),
+                        paste(alltwitter [twitter.inds[i,]],collapse = " "), collapse = " ")
     
     
     tr.samp<-clean(VCorpus(VectorSource(tr.samp)),FALSE)
     
-    file.name<-paste0("Sample Data/trsamp_",samp,"_",size*100,".RDS")
+    file.name<-paste0("Sample Data/trsamp_",i,"_",size*100,".RDS")
     
     saveRDS(tr.samp, file = file.name)
     
+    print(paste0("Sample", i, "saved"))
+    
     
     }
+
+    
 
 # tr.samp <- list(n = n, size = size, sample = tr.samp)
 # 
@@ -116,7 +122,7 @@ corpSample<-function(n,size)  {
 # file.name<-paste0("Sample Data/trsamp_",n,"_",size,".RDS")
 # 
 # saveRDS(tr.samp, file = file.name)
-  print(paste("Saved ",n," Sample Corpuses, each representing ", as.character(size*100)," percent of the full text"))
+  print(paste("Generated, Cleaned and Saved ",n," Sample Corpuses, each representing ", as.character(size*100)," percent of the full text"))
   
 }
 
@@ -218,17 +224,9 @@ ngramcoverage<-function(tdm) {
   
   tdm<-as.matrix(tdm)
   
-  word.freq<-data.table(ngram = row.names(tdm), frequency = rowSums(tdm))
-  
-  #word.freq<-setorder(word.freq, -frequency)
-  
-  word_count <-sum(word.freq$frequency)
-
-  word.freq<-word.freq[,':='(probability = word.freq$frequency/word_count,
-                             frequency   = word.freq$frequency
-#                            word  ,
-#                              coverage    = round(100*cumsum(word.freq$frequency)/word_count,3)
-                             )]
+  word.freq <- data.table(ngram = row.names(tdm), frequency = tdm[,1]) 
+    
+  word.freq [, wordcount := stri_count_words(ngram)][, wordtotal := sum(frequency), by = wordcount][, probability := frequency/wordtotal][,wordtotal:=NULL]
   
 #   g<-qplot(x = 1:nrow(word.freq),
 #            y = word.freq$coverage,

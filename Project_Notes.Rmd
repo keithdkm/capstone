@@ -57,7 +57,7 @@ One piece of manual clean up was performed on the en_US.news.txt file.  A SUB ch
 
 ```{r Load the data,echo=FALSE, results = "as.is"}
 
-n<-1000
+n<-20
 
 size <- 0.05
 
@@ -104,10 +104,10 @@ The following cleaning steps were performed :
 
 #Aggregate ngram frequencies for all the samples
 
+#
 
 
-
-ngramfreq<-data.table(ngram="",probability = 0,frequency= 0)
+ngramfreq<-data.table(ngram="",frequency= 0, wordcount = 0, probability = 0)
 
 for (i in 1:n) {
 
@@ -115,12 +115,16 @@ print(paste("Processing Sample", i, " of ",size,"percent",Sys.time()))
     
 file.name<-paste0("Sample Data/trsamp_",i
                   ,"_",as.character(size),".RDS")
+ 
+print(paste0("Reading ", file.name))
 
 tr.samp<-readRDS(file.name)  # Read in hte corpus of prepared samples
 
 tdm <- TermDocumentMatrix(tr.samp, control = list(tokenize = Tokenizer_3 )) ; rm(tr.samp)
 
-ngramfreq<-rbind(ngramfreq,ngramcoverage(tdm)); rm(tdm)
+ngramfreq<-rbind(ngramfreq,ngramcoverage(tdm)) 
+
+rm(tdm)
 
 # setkey(y,"ngram");
 
@@ -134,9 +138,7 @@ ngramfreq<-rbind(ngramfreq,ngramcoverage(tdm)); rm(tdm)
 }
 
 
-system.time(final<-ngramfreq[,.(Mean.Probability  =  mean(probability), Mean.Frequency = mean(frequency)) ,by = .(ngram)]
-)
-final<-final[,wordcount := stri_count_words(ngram)]
+final<-ngramfreq[,.(Mean.Probability  =  mean(probability), Mean.Frequency = mean(frequency) ) ,by = .(ngram)][,wordcount := stri_count_words(ngram)]
 
 
 ```
