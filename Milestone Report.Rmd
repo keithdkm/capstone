@@ -1,0 +1,34 @@
+---
+title: "Capstone Project: A text Prediction Algorithm"
+subtitle: "Milestone Report"
+author: "Keith Miller"
+date: "July 25, 2015"
+output: html_document
+---
+
+##Executive Summary
+
+This is a milestone report covering progress to date on the design and build  of the a text prediction application based. In the early stages of the project three large samples of data from blogs, news reports and twitter were downloaded.  The samples were reviewed and tools and strategies developed for cleaning the data, sampling the data, tokenizing the data and summarizing the data for use in am ngram based model.  An early version of the text prediction algorithm was developed based upon ngram frequency.
+
+
+##Data Acquisition and Cleaning
+
+###File download and Review
+
+####Summary Stats
+
+Size of files
+Number of lines
+number of characters
+
+
+
+
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+plot(cars)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
