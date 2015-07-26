@@ -72,6 +72,7 @@ corpSample<-function(n,size)  {
 
   if(!dir.exists("Sample Data")) dir.create("Sample Data")
   
+  
   size      <- size/100  # what proportion of the file should the sample represent
 
   blogsize    = round(size * length(allblogs))
@@ -100,9 +101,12 @@ corpSample<-function(n,size)  {
                         paste(alltwitter [twitter.inds],collapse = " "), collapse = " "))
     
     
+    tr.samp<-clean(VCorpus(VectorSource(tr.samp)),FALSE)
+    
     file.name<-paste0("Sample Data/trsamp_",samp,"_",size*100,".RDS")
     
-    saveRDS(VCorpus(VectorSource(tr.samp)), file = file.name)
+    saveRDS(tr.samp, file = file.name)
+    
     
     }
 
@@ -123,13 +127,13 @@ corpSample<-function(n,size)  {
 
 clean<-function(x,stopw){
   
-  con<-file("clean_text.txt","wt")
+  con<-file("~/R/Capstone/Results/clean_text.txt","wt")
   writeLines("\nRAW TEXT", con)
   writeLines(substring(x[[1]]$content,1,600),con)
   
   
   # Remove any words appearing on Google's list of profane words  
-  conf<-file("Required Data/dirty.txt",'r')
+  conf<-file("~/R/Capstone/Required Data/dirty.txt",'r')
   profanity<-readLines(conf)
   close(conf)
   x<-tm_map(x,removeWords,profanity)
@@ -203,7 +207,11 @@ Tokenizer_3 <- function(x) NGramTokenizer(x,
                                                        max = 3,
                                                        delimiters =" .\n"))
 
-
+#Tokenizer control function for 2grams, 3grams
+Tokenizer_4 <- function(x) NGramTokenizer(x, 
+                                          Weka_control(min = 4, 
+                                                       max = 4,
+                                                       delimiters =" .\n"))
 
 #Returns relative frequency of each of the ngram in a TDM 
 ngramcoverage<-function(tdm) {
@@ -216,8 +224,9 @@ ngramcoverage<-function(tdm) {
   
   word_count <-sum(word.freq$frequency)
 
-  word.freq<-word.freq[,':='(probability = word.freq$frequency/word_count
-#                              ,
+  word.freq<-word.freq[,':='(probability = word.freq$frequency/word_count,
+                             frequency   = word.freq$frequency
+#                            word  ,
 #                              coverage    = round(100*cumsum(word.freq$frequency)/word_count,3)
                              )]
   

@@ -31,6 +31,7 @@ library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("data.table", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("stringi", lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("stringr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("plyr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("parallel", lib.loc="~/R/Capstone/packrat/lib-R")
 source('~/R/Capstone/MakeSample.R', encoding = 'UTF-8')
 
@@ -55,9 +56,9 @@ One piece of manual clean up was performed on the en_US.news.txt file.  A SUB ch
 
 ```{r Load the data,echo=FALSE, results = "as.is"}
 
-n<-3
+n<-1000
 
-size <- 0.1
+size <- 0.05
 
 corpSample(n,size)
 
@@ -74,27 +75,11 @@ The datasets that we have available are large so for initial data cleaning, expl
 My approach to sampling will be to experiment with the number of samples and what proportion of the source text those samples represent.  I will build randomly generated vectors of indices to select random lines of text from all three source types, concatenate together all of the returned lines of text and store them as vectors in RDS files for easy re-use
 
 
-```{r Read in prepared samples}
-
-# file.name<-paste0("Sample Data/trsamp_",n,"_",as.character(size),".RDS")
-# 
-# tr.samp<-readRDS(file.name)  # Read in hte corpus of prepared samples
-
-
-
-
-```
 
 
 
 ###Cleaning the data
 
-```{r Clean data function}
-
-
-# clean.tr.samp <- clean(tr.samp,FALSE)
-
-```
 
 #### Data Cleaning Approach
 
@@ -119,26 +104,38 @@ The following cleaning steps were performed :
 #Aggregate ngram frequencies for all the samples
 
 
-ngramfreq<-data.table(ngram = "")
+
+
+ngramfreq<-data.table(ngram="",probability = 0,frequency= 0)
 
 for (i in 1:n) {
-  
-file.name<-paste0("Sample Data/trsamp_",i,"_",as.character(size),".RDS")
+
+print(paste("Processing Sample", i, " of ",size,"percent",Sys.time()))   
+    
+file.name<-paste0("Sample Data/trsamp_",i
+                  ,"_",as.character(size),".RDS")
 
 tr.samp<-readRDS(file.name)  # Read in hte corpus of prepared samples
 
-clean.tr.samp <- clean(tr.samp,FALSE); rm(tr.samp)
+tdm <- TermDocumentMatrix(tr.samp, control = list(tokenize = Tokenizer_3 )) ; rm(tr.samp)
 
-tdm <- TermDocumentMatrix(clean.tr.samp, control = list(tokenize = Tokenizer_3 ))
+ngramfreq<-rbind(ngramfreq,ngramcoverage(tdm)); rm(tdm)
 
-y<-ngramcoverage(tdm); rm(tdm)
+# setkey(y,"ngram");
 
-ngramfreq <- merge (x = ngramfreq, y = y , by = "ngram", all = TRUE, suffixes = as.character(i) )
+# ngramfreq <- merge (x = ngramfreq, y = y , by = "ngram", all = TRUE, suffixes =  )
+
+# cols<-ncol(ngramfreq)
+# 
+# setnames(ngramfreq, c(cols-1,cols),c(paste("Probability",i),paste("Frequency",i)))
+
 
 }
 
 
-
+system.time(final<-ngramfreq[,.(Mean.Probability  =  mean(probability), Mean.Frequency = mean(frequency)) ,by = .(ngram)]
+)
+final<-final[,wordcount := stri_count_words(ngram)]
 
 
 ```
