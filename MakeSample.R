@@ -13,7 +13,7 @@ datasize <- function(file) {
   
   nwords <- sum(stri_count_words(file))
   
-  a<- list ( size = size,linecount = nlines, wordcount = nwords)
+  data.frame ( as.numeric(size/2^10), nlines, nwords )
   
   
 }
@@ -35,7 +35,8 @@ setwd("~/R/Capstone")
                       warn    = FALSE,
                       encoding= "UTF-8"))
   print("Blog data loaded")
-  print(unlist(datasize(allblogs))) }
+  # print(unlist(datasize(allblogs))) 
+  }
   
   
   if (!exists("allnews")) { 
@@ -45,7 +46,8 @@ setwd("~/R/Capstone")
                      warn    = FALSE ,
                      encoding= "UTF-8"))
   print("News data loaded")
-  print(unlist(datasize(allnews))) }
+  # print(unlist(datasize(allnews))) 
+  }
   
   
   if (!exists("alltwitter")) {
@@ -56,10 +58,14 @@ setwd("~/R/Capstone")
                         encoding= "UTF-8"))
 
   print("Twitter data loaded")
-  print(unlist(datasize(alltwitter)))}
-}
-
+  # print(unlist(datasize(alltwitter)))
+  }
   
+  a<-cbind(c("en_US.blogs.txt","en_US.news.txt","en_US.twitter.txt"), rbind( datasize(allblogs),datasize(allnews),datasize(alltwitter)))
+  
+
+
+  }
 
   
   ##function to generate n samples of size% of the entire dataset
@@ -216,7 +222,7 @@ Tokenizer_3 <- function(x) NGramTokenizer(x,
 #Tokenizer control function for 2grams, 3grams
 Tokenizer_4 <- function(x) NGramTokenizer(x, 
                                           Weka_control(min = 4, 
-                                                       max = 4,
+                                                       max = 5,
                                                        delimiters =" .\n"))
 
 #Returns relative frequency of each of the ngram in a TDM 

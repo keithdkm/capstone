@@ -8,27 +8,138 @@ output: html_document
 
 ##Executive Summary
 
-This is a milestone report covering progress to date on the design and build  of the a text prediction application based. In the early stages of the project three large samples of data from blogs, news reports and twitter were downloaded.  The samples were reviewed and tools and strategies developed for cleaning the data, sampling the data, tokenizing the data and summarizing the data for use in am ngram based model.  An early version of the text prediction algorithm was developed based upon ngram frequency.
+This is a milestone report covering progress to date on the design and build of a web-based English language text prediction application based upon the Shiny development platform. In the early stages of the project three large samples of data from blogs, news reports and twitter were downloaded.  The samples were reviewed and tools and strategies developed for cleaning the data, sampling the data, tokenizing the data and summarizing the data for use in am ngram based model.  Using the R language's extensive library of functions, code was written to complete these steps.  After experimentation, it was dtermined that a 25% sample of the source data provided a reasonable balance between results accuracy and computing resources for the initial model building. Analyzing the unigrams, i.e.single words, it was determined that a dictionary of only 249 words covers 50% of the words appearing and a dictionary of 9056 words covers 90% of the words appearing in the corpus of source texts.  
 
 
 ##Data Acquisition and Cleaning
 
 ###File download and Review
 
+There are three different English language data sources available, blogs, news and twitter the content of which were randomly selected.  Similar corpuses were available in three other languages but we worked solely with the English language for this first milestone.  
+
 ####Summary Stats
 
-Size of files
-Number of lines
-number of characters
+```{r Libraries and source, echo=FALSE, warning=FALSE, message=FALSE}
+
+options( java.parameters = "-Xmx4g" )
+
+library("caret", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("e1071", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("tm",    lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("data.table", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("stringi", lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("stringr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("plyr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("knitr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 
 
+source('~/R/Capstone/MakeSample.R', encoding = 'UTF-8')
 
-
-
-You can also embed plots, for example:
-
-```{r, echo=FALSE}
-plot(cars)
+setwd("~/R/Capstone")
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+
+```{r Download Data and Generate Stats, echo = FALSE, message=FALSE, cache = TRUE}
+
+a<-load.data()
+
+kable(a,col.names = c("File Name", "File Size Mb","Line Count","Word Count"), caption = "Figure 1: Raw data statistics")
+
+```
+
+The dataset is large relatively large given that our goal is to build a word and phrase based prediction algorithm.  It was decided to work with a small sample. It was also noted that the blog and twitter files contain ten times as many words as the news file.  Given the very different use of language in twitter and blog posts, this was noted as a possible source of skewing in the data.  However the algorithm we are aiming to develop is for general use
+
+After some experimentation with performance, it was decided that a 25% sample of the data was practical.  The approach was to download the entire dataset into R and then generate many small random samples of the line numbers for each source and load those lines into a corpus data structure.  Each of the generated corpuses has lines of text from all three sources.   
+
+###Tools
+
+R provides many useful libraries for text mining.  This project uses the tm, RWeka, stringi and data.table packages.  
+
+###Data Cleaning
+ 
+The following steps were performed to clean the sample
+
+1. Standardize to UTF-8 and remove all unrecognized characters
+1. Remove any words appearing on Google's list of profane words  
+1. Convert to chars lower case
+1. Replace all sentence ending chars with newline
+1. Remove apostrohes from contractions 
+1. All other stop characters and numerics replace with a period
+1. Remove all other unknown characters 
+1. Remove single letters that are not valid single letters 
+1. remove extra whitespace 
+  
+###Tokenization
+
+Having cleaned the data, the sample was tokenized, meaning that it was divided up into one, two and three word phrases called ngrams. 
+  
+
+
+
+##Exploratory analysis
+
+Ngrams and their relative frequencies will form the basis of our prediction algorithm.  They are, however, unlikely to be sufficient for a good algorithm. The goal of this exercise is to determine the approximate number of ngrams that will cover a significant proportion of the predictions we're going to make.  Our limitation is that the web application has limited memory capabilities and has to perform in real time.  
+
+In the sample, we identified the following numbers of ngrams
+
+```{r REad in the ngram freq table, echo = FALSE, cache=TRUE}
+
+final<-readRDS("Results/trigrams 500 samples 0.05 percent/final.RDS")
+final<-final[-1,]
+kable(data.frame(c("1gram","2gram","3gram"),c(final[wordcount==1,.N], final[wordcount==2,.N], final[wordcount==3,.N])),col.names = c("Ngram", "Count"))
+
+```
+
+Here are samples from the top, middle and bottom of the 1gram,2gram and 3gram list sorted by probability.: 
+```{r, echo= FALSE}
+setorder(final,wordcount, -Mean.Probability)
+kable(data.frame(ngram = c("1gram","2gram","3gram"), 
+          Head = c(paste(final[wordcount == 1, ngram][1:10],collapse=","), 
+                   paste(final[wordcount == 2, ngram][1:10],collapse=","),
+                   paste(final[wordcount == 3, ngram][1:10],collapse=",")), 
+          Middle = c(paste(final[wordcount == 1, ngram][135396:135405],collapse=","), 
+                     paste(final[wordcount == 2, ngram][2207370:2207380],collapse=","),
+                     paste(final[wordcount == 3, ngram][5464252:5464262],collapse=",")), 
+          End = c(paste(tail(final[wordcount == 1, ngram]),collapse=","), 
+                  paste(tail(final[wordcount == 2, ngram]),collapse=","),
+                  paste(tail(final[wordcount == 3, ngram]),collapse=",")) ))
+
+```
+
+
+
+A term document matrix was created for our sample set that generated a frequency for each ngram. 
+
+Plotting these frequencies for 1grams 
+
+```{r Graph Relative Frequencies, echo = F,results = 'hide'}
+
+ 
+final[,Cum.Probability:=cumsum(Mean.Probability),by = wordcount]
+```
+```{r,, echo = F, cache= TRUE}
+g<-ggplot(final[wordcount==1,],aes(log10(1:final[wordcount==1,.N]),Cum.Probability))+geom_line()+ggtitle("Cumulative Probability Density for 1grams by  Dictionary Size") + xlab("Log 10(Dictionary Size in Words)") + ylab("Cumulative Probability of Word Inclusion")
+print(g)
+```
+
+This graph show that a dictionary of `r final[wordcount==1 & Cum.Probability<0.5 ,.N]` words has a 50% chance of any a single word being in the dictionary and that a dictionary of `r final[wordcount==1 & Cum.Probability<0.9 ,.N]` words has 90% chance of being in the dictionary. Increasing dictionary size from 10000 words to 100,000 words only improves the chance of a word being in the dictionary by around 5 percentage points.  This graph suggests that a dictionary size that uses around 15,000 words will give `r round(100*final[wordcount==1 ,Cum.Probability][15000])` probability that a word will be found.  This will be the most efficient balance of size, speed and accuracy.  This finding will be used to select and limit the size of the list on ngrams that are used to for word prediction
+
+
+```{r, echo = F, cache =TRUE}
+g<-ggplot(final[wordcount==2,],aes(log10(1:final[wordcount==2,.N]),Cum.Probability))+geom_line()+ggtitle("Cumulative Probability Density for 2grams by  Dictionary Size") + xlab("Log 10(Dictionary Size in Words)") + ylab("Cumulative Probability of Word Inclusion")
+print(g)
+```
+
+This graph show that a dictionary of `r final[wordcount==2 & Cum.Probability<0.5 ,.N]` 2grams has a 50% chance of any a 2gram word being in the dictionary and that even a dictionary of `r final[wordcount==2 & Cum.Probability<0.9 ,.N]` 2grams only has 90% chance of including the 2gram.  
+
+The results are similar with 3grams. With nearly `r format(11000000,big.mark = ",", scientific = FALSE )` unique ngrams a dictionary with sufficient coverage is going to be too large.
+
+##Conclusion
+
+Given these results for 1grams and 2grams, the intent is to use a set of ngrams that are limited to predicting the most likely 15,000 words from the 1gram dictionary.  In order to predict less likely words an additional strategy will be required.  
+
+
+
