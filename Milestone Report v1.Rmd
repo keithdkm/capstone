@@ -1,0 +1,132 @@
+---
+title: "Capstone Project: A text Prediction Algorithm"
+subtitle: "Milestone Report"
+author: "Keith Miller"
+date: "July 25, 2015"
+output: html_document
+---
+
+##Executive Summary
+
+This is a milestone report covering progress to date on the design and build of a web-based English language text prediction application based upon the Shiny development platform. In the early stages of the project three large samples of data from blogs, news reports and twitter were downloaded.  The samples were reviewed and tools and strategies developed for cleaning the data, sampling the data, tokenizing the data and summarizing the data for use in am ngram based model.  Using the R language's extensive library of functions, code was written to complete these steps.  After experimentation, it was dtermined that a 25% sample of the source data provided a reasonable balance between results accuracy and computing resources for the initial model building. Analyzing the unigrams, i.e.single words, it was determined that a dictionary of ???? words covers 50% of the words appearing and a dictionary of ???? words covers 90% of the words appearing in the corpus of source texts.  
+
+
+##Data Acquisition and Cleaning
+
+###File download and Review
+
+There are three different English language data sources available, blogs, news and twitter the content of which were randomly selected.  Similar corpuses were available in three other languages but we worked solely with the English language for this first milestone.  
+
+####Summary Stats
+
+```{r Libraries and source, echo=FALSE, warning=FALSE, message=FALSE}
+
+options( java.parameters = "-Xmx4g" )
+
+library("caret", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("e1071", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("tm",    lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("data.table", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("stringi", lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("stringr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("plyr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("knitr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+
+
+source('~/R/Capstone/MakeSample.R', encoding = 'UTF-8')
+
+setwd("~/R/Capstone")
+```
+
+
+
+
+```{r Download Data and Generate Stats, echo = FALSE, message=FALSE, cache = TRUE}
+
+a<-load.data()
+
+kable(a,col.names = c("File Name", "File Size Mb","Line Count","Word Count"), caption = "Figure 1: Raw data statistics")
+
+```
+
+The dataset is large relatively large given that our goal is to build a word and phrase based prediction algorithm.  It was decided to work with a small sample. It was also noted that the blog and twitter files contain ten times as many words as the news file.  Given the very different use of language in twitter and blog posts, this was noted as a possible source of skewing in the data.  However the algorithm we are aiming to develop is for general use
+
+After some experimentation with performance, it was decided that a 25% sample of the data was practical.  The approach was to download the entire dataset into R and then generate many small random samples of the line numbers for each source and load those lines into a corpus data structure.  Each of the generated corpuses has lines of text from all three sources.   
+
+###Tools
+
+R provides many useful libraries for text mining.  This project uses the tm, RWeka, stringi and data.table packages.  
+
+###Data Cleaning
+Once 
+The following steps were performed to clean the sample
+
+1. Standardize to UTF-8 and remove all unrecognized characters
+1. Remove any words appearing on Google's list of profane words  
+1. convert to Lower
+1. replace all sentence ending chars with newline
+1. emove apostrohes from contractions 
+1. All other stop characters and numerics replace with a period
+1. remove all other unknown chars 
+1. Remove single letters that are not valid single letters 
+1. remove extra whitespace 
+  
+###Tokenization
+
+Having cleaned the data, the sample was tokenized, meaning that it was divided up into one, two and three word phrases called ngrams. 
+  
+
+##Exploratory analysis
+
+Ngrams and their relative frequencies will form the basis of our prediction algorithm.  They are, however, unlikely to be sufficient for a good algorithm. The goal of this exercise is to determine the approximate number of ngrams that will cover a significant proportion of the predictions we're going to make.  Our limitation is that the web application has limited memory capabilities and has to perform in real time.  
+
+In the sample, we identified the following numbers of ngrams
+
+```{r REad in the ngram freq table, echo = FALSE, cache=TRUE}
+
+final<-readRDS("Results/trigrams 500 samples 0.05 percent/final.RDS")
+final<-final[-1,]
+kable(data.frame(c("1gram","2gram","3gram"),c(final[wordcount==1,.N], final[wordcount==2,.N], final[wordcount==3,.N])),col.names = c("Ngram", "Count"))
+
+```
+
+A term document matrix was created for our sample set that generated a frequency for each ngram. 
+
+Plotting these frequencies 
+
+```{r Graph Relative Frequencies, echo = F}
+
+# totals<-final[ ,sum(Mean.Frequency), by = wordcount][,V1]
+# 
+# final[,CumSum := cumsum(Mean.Frequency) / totals[wordcount], by = wordcount]
+
+
+final[,Cum.Probability:=cumsum(Mean.Probability),by = wordcount]
+ 
+
+```
+
+
+Calculating the frequencies of each the 1grams we need `r  final[count==1 & round(Cum.Probability)<0.5 ,.N]
+
+Tasks to accomplish
+
+
+
+Exploratory analysis - perform a thorough exploratory analysis of the data, understanding the distribution of words and relationship between the words in the corpora. 
+Understand frequencies of words and word pairs - build figures and tables to understand variation in the frequencies of words and word pairs in the data.
+Questions to consider
+
+Some words are more frequent than others - what are the distributions of word frequencies? 
+What are the frequencies of 2-grams and 3-grams in the dataset? 
+How many unique words do you need in a frequency sorted dictionary to cover 50% of all word instances in the language? 90%? 
+How do you evaluate how many of the words come from foreign languages? 
+Can you think of a way to increase the coverage -- identifying words that may not be in the corpora or using a smaller number of words in the dictionary to cover the same number of phrases?
+
+Conclusion 
+
+
+Modelling
+
+Keep ngrams for the most common words
