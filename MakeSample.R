@@ -300,6 +300,10 @@ started.at = proc.time()
   
  cat("Finished ",n,"samples in ",timetaken(started.at),"\n") 
   
+ 
+ phrase <-  function(x) quadgrams [as.character(x), ][order(-count),wordi]
+ 
+ 
   #
   # bigrams<-ngramfreq[, totalcount := sum(count) , by = .(wordi)][, numwords := stri_count_words(wordi), ][,pwiw1 := log10(totalcount)-log10(unigrams[stri_extract_first_words(ngramfreq$wordi),count])]
   
