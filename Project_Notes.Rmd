@@ -31,9 +31,7 @@ options( java.parameters = "-Xmx4g" )
 library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("data.table", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("stringi", lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("stringr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("plyr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("parallel", lib.loc="~/R/Capstone/packrat/lib-R")
 source('~/R/Capstone/MakeSample.R', encoding = 'UTF-8')
 
 setwd("~/R/Capstone")
@@ -107,31 +105,41 @@ The following cleaning steps were performed :
 #
 
 
-ngramfreq<-data.table(ngram="",frequency= 0, wordcount = 0, probability = 0)
+ngramfreq<-data.table(wordi="", count = 0)
+
+con<-file("~/R/Capstone/Debug/sample_text.txt")
 
 for (i in 1:n) {
 
-file.name<-paste0("~/R/Capstone/Sample Data/trsamp_",i,"_",as.character(size),".RDS")
+file.name<-paste0("~/R/Capstone/Sample Data/Sample Data 500x0.05/trsamp_",i,"_",as.character(size),".RDS")
 
- 
 print(paste0("Reading ", file.name))
 
 tr.samp<-readRDS(file.name)  # Read in hte corpus of prepared samples
 
 print(paste("Processing Sample", i, " of ",size,"percent",Sys.time())) 
 
-tdm <- TermDocumentMatrix(tr.samp, control = list(tokenize = Tokenizer_4 )) ; rm(tr.samp)
+writeLines(tr.samp[[1]]$content,con)
+
+tdm <- TermDocumentMatrix(tr.samp, control = list(wordLengths = c(1,Inf),tokenize = Tokenizer_2 )) ; rm(tr.samp)
 
 ngramfreq<-rbind(ngramfreq,ngramcoverage(tdm)) 
 
 rm(tdm)
 
-
-
 }
 
+close(con)
 
-final<-ngramfreq[-1,.(Mean.Probability  =  sum(probability), Mean.Frequency = sum(frequency) ) ,by = .(ngram)][,":=" (  Mean.Probability = Mean.Probability/n, Mean.Frequency = Mean.Frequency/n, wordcount = stri_count_words(ngram))]
+setkey(ngramfreq,wordi)
+
+
+# unigrams<-ngramfreq[, count:= sum(count) , by = wordi][, numwords := stri_count_words(wordi)][,probability := log10(count/sum(count))]
+
+
+ bigrams<-ngramfreq[, count = sum(count) , by = .(wordi)][, numwords := stri_count_words(wordi), ][,pwiw1 := log10(count)-log10(unigrams[stri_extract_first_words(ngramfreq$wordi),count])]
+
+# final<-ngramfreq[-1,.(Mean.Probability  =  sum(probability), Mean.Frequency = sum(frequency) ) ,by = .(ngram)][,":=" (  Mean.Probability =       Mean.Probability/n, Mean.Frequency = Mean.Frequency/n, wordcount = stri_count_words(ngram))]
 
 
 ```

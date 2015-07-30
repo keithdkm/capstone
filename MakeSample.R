@@ -1,7 +1,12 @@
 ##REquired libraries
-library("stringi", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("tm", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("tm",         lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+options( java.parameters = "-Xmx4g" )
+library("RWeka",      lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("data.table", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("stringi",    lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("plyr",       lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+
+setwd("~/R/Capstone")
 
 
 ### FILE INFO CALCUALTIONS
@@ -221,35 +226,117 @@ Tokenizer_3 <- function(x) NGramTokenizer(x,
 
 #Tokenizer control function for 2grams, 3grams
 Tokenizer_4 <- function(x) NGramTokenizer(x, 
-                                          Weka_control(min = 4, 
-                                                       max = 5,
+                                          Weka_control(min = 1, 
+                                                       max = 4,
                                                        delimiters =" .\n"))
 
-#Returns relative frequency of each of the ngram in a TDM 
+#Returns ngram count for each ngram
 ngramcoverage<-function(tdm) {
   
   tdm<-as.matrix(tdm)
   
-  word.freq <- data.table(ngram = row.names(tdm), frequency = tdm[,1]) 
+  word.freq <- data.table(wordi = row.names(tdm), count = tdm[,1], sample = i) 
     
-  word.freq [, wordcount := stri_count_words(ngram)][, wordtotal := sum(frequency), by = wordcount][, probability := frequency/wordtotal][,wordtotal:=NULL]
+  #word.freq [, wordcount := stri_count_words(ngram)]
   
-#   g<-qplot(x = 1:nrow(word.freq),
-#            y = word.freq$coverage,
-#            main = "Coverage", 
-#            xlab = "No. of words in Dictionary", 
-#            ylab = "Percentage Document Sample Coverage () ")
-  
-#   dictionary10<-word.freq[coverage<=10,ngram]
-#   cover10<-length(dictionary10)
-#   dictionary50<-word.freq[coverage<=50,ngram]
-#   cover50 <- length(dictionary50)
-#   dictionary90<-word.freq[coverage<=90,ngram]
-#   cover90<- length(dictionary90)
-  
-  # list(freqtable = word.freq,  cover50 = cover50, cover90 = cover90  )
   word.freq
 }
 
 
 
+started.at = proc.time()
+  
+  
+  ngramfreq<-data.table(list(list()))
+  
+  for (i in 1:n) {
+    
+    file.name<-paste0("~/R/Capstone/Sample Data/Sample Data 500x0.05/trsamp_",i,"_",as.character(size),".RDS")
+    
+    print(paste0("Reading ", file.name))
+    
+    tr.samp<-readRDS(file.name)  # Read in hte corpus of prepared samples
+    
+    print(paste("Processing Sample", i, " of ",size,"percent " )) 
+    
+    tdm <- TermDocumentMatrix(tr.samp, control = list(wordLengths = c(1,Inf),tokenize = Tokenizer_4 )) ; rm(tr.samp)
+    
+    ngramfreq<-rbind(ngramfreq,ngramcoverage(tdm),fill=TRUE) 
+    
+    rm(tdm)
+    
+  }
+  
+  
+  ngramfreq[, numwords := stri_count_words(wordi) ]
+
+  setkey(ngramfreq,numwords,wordi)
+  
+  unigrams<- ngramfreq[numwords == 1, .(count = sum(count)) , by = .(wordi)][,probability := log10(count/sum(count))]
+  
+  setkey(unigrams,wordi)
+  
+  bigrams <- ngramfreq[numwords == 2, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2") := tstrsplit(wordi, " ", fixed = TRUE)]
+  
+  setkey(bigrams,wordi)
+  
+  # bigrams[,pw2_w1 := log10(count/unigrams[stri_extract_first_words(bigrams$wordi),count])]
+  
+  bigrams[,pw2_w1 := log10(count/unigrams[bigrams$W1,count])]
+  
+  trigrams <- ngramfreq[numwords == 3, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2:=paste0(W1," ",W2)]
+  
+  setkey(trigrams,W1W2)
+  
+  trigrams[, pw3_w2w1 := log10(count/ bigrams[trigrams$W1W2, count])]
+  
+  quadgrams <- ngramfreq[numwords == 4, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3","W4") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2W3:=paste0(W1," ",W2," ",W3)]
+  
+  setkey(quadgrams,W1W2W3)
+  
+  quadgrams[,p4_w3w2w1 := log10(count/ trigrams[quadgrams$W1W2W3, count])]
+  
+  
+  
+ cat("Finished ",n,"samples in ",timetaken(started.at),"\n") 
+  
+ 
+ phrase <-  function(x) quadgrams [as.character(x), ][order(-count),wordi]
+ 
+ 
+  #
+  # bigrams<-ngramfreq[, totalcount := sum(count) , by = .(wordi)][, numwords := stri_count_words(wordi), ][,pwiw1 := log10(totalcount)-log10(unigrams[stri_extract_first_words(ngramfreq$wordi),count])]
+  
+#   a_spl <- function(dt) {
+#     ll <- unlist(strsplit(dt$PREFIX, "_", fixed=TRUE))
+#     idx <- seq(1, length(ll), by = 2)
+#     dt[, `:=`(px = ll[idx], py = ll[idx+1])]
+#   }
+#   
+#   a_sub <- function(dt, u) {
+#     dt[, `:=`(px = substring(PREFIX, 1, u), 
+#               py = substring(PREFIX, u+2, nchar(PREFIX)))]
+#     
+#   }
+#   
+#   op <- function(dt) {
+#     dt[, px := sapply(strsplit(dt$PREFIX, split="_"), "[", 1)]
+#     dt[, py := sapply(strsplit(dt$PREFIX, split="_"), "[", 2)]
+#   }
+#   
+#   dt = data.table( PREFIX=rep(c("A_B","A_C","A_D","B_A","B_C","B_D"), 
+#                               1000000), VALUE=rep(c(1,2,3,4,5,6), 1000000) )
+#   
+#   require(microbenchmark)
+#   microbenchmark(a1 <- a_spl(copy(dt)), 
+#                  a2 <- a_sub(copy(dt), 1), 
+#                  a3 <- op(copy(dt)), times = 5)
+#   
+#   Unit: seconds
+#   expr       min        lq     median         uq        max neval
+#   a1 <- a_spl(copy(dt))  4.496515  4.577718   7.620985   7.898372  11.081218     5
+#   a2 <- a_sub(copy(dt), 1)  2.545999  2.603123   2.671415   2.785419   3.193427     5
+#   a3 <- op(copy(dt)) 95.287777 96.092578 114.013580 122.539977 130.565100     5
+#   
+#   identical(a1, a2) # TRUE
+#   identical(a1, a3) # TRUE
