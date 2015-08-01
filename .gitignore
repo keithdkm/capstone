@@ -8,3 +8,7 @@ Project_Notes_cache/
 Milestone_Report_cache/
 Debug/
 *.html
+Milestone_Report_files/
+Results/quadgrams 300x0.05/trigrams.RDS
+Results/
+rsconnect/documents/Milestone Report.Rmd/rpubs.com/rpubs/Publish Document.dcf
