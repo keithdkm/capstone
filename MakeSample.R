@@ -10,7 +10,6 @@ library("plyr",       lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1
 
 setwd("~/R/Capstone")
 
-
 ### FILE INFO CALCUALTIONS
 datasize <- function(file) {
   
@@ -166,12 +165,12 @@ clean<-function(x,stopw){
     writeLines("\nRemove stop words", con)
     writeLines(substring(x[[1]]$content,1,600),con)}
   
-  #replace all sentence ending chars with newline
-  x<-tm_map(x, replacechars, '[.?!]+[ ]',              "</s> <s>") 
-  writeLines("Replace sentence endings with newlines", con)
+  #replace all sentence ending chars with STOP tag </s>
+  x<-tm_map(x, replacechars, '[.?!]+[ ]', "</s> <s>") 
+  writeLines("Replace sentence endings with Stop", con)
   writeLines(substring(x[[1]]$content,1,600),con)
   
-  #remove apostrohes from contractions 
+  #remove apostrophes from contractions 
   x<-tm_map(x, replacechars, '[\'\`]',      "" )  
   writeLines("\nRemove apostrohes", con)
   writeLines(substring(x[[1]]$content,1,600),con)
@@ -185,7 +184,7 @@ clean<-function(x,stopw){
   writeLines(substring(x[[1]]$content,1,600),con)
   
   #remove all other unknown chars 
-  x<-tm_map(x, replacechars, '[^a-z. \n]',         "")  
+  x<-tm_map(x, replacechars, '[^a-z. \n<>]',         "")  
   writeLines("\nRemove other unknown chararcters", con)
   writeLines(substring(x[[1]]$content,1,600),con)
   
@@ -279,7 +278,6 @@ started.at = proc.time()
   
     }
  
-
 # Predicts wnext word from a phrase x 
 phrase <-  function(x) {
      
