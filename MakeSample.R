@@ -137,9 +137,9 @@ clean<-function(x,stopw){
 
   
   #Identifies periods that are teh tnd of sentecnes
-  eos<-function( )
-  {}
-  
+#   eos<-function( )
+#   {}
+#   
     
   if(!dir.exists("Results")) dir.create("Results")
   
@@ -151,14 +151,22 @@ clean<-function(x,stopw){
   conf<-file("~/R/Capstone/Required Data/dirty.txt",'r')
   profanity<-readLines(conf)
   close(conf)
+  replaceWords<- function {
+    
+    
+    
+  }
+  
+  
   x<-tm_map(x,removeWords,profanity)
   
     #open file to send text samples to
-  replacechars<-content_transformer(function(x,pattern,new) gsub(pattern, new, x))
+  replacechars<-content_transformer(function(x,pattern,new) 
+                                              gsub(pattern, new, x))
   
-  #convert to Lower
-  x<-tm_map(x,content_transformer(tolower))
-  
+#   #convert to Lower
+#   x<-tm_map(x,content_transformer(tolower))
+#   
   #remove stopwords
   if (stopw) {
     x<-tm_map(x, removeWords, stopwords("en"))
@@ -166,7 +174,7 @@ clean<-function(x,stopw){
     writeLines(substring(x[[1]]$content,1,600),con)}
   
   #replace all sentence ending chars with STOP tag </s>
-  x<-tm_map(x, replacechars, '[.?!]+[ ]', "</s> <s>") 
+  x<-tm_map(x, replacechars, '[.?!]+[ ]', "</s>/n<s>") 
   writeLines("Replace sentence endings with Stop", con)
   writeLines(substring(x[[1]]$content,1,600),con)
   
@@ -221,7 +229,7 @@ ngramcoverage<-function(tdm) {
   word.freq
 }
 
-make.ngrams()<-function(){
+make.ngrams<-function(){
 started.at = proc.time()
   
   ngramfreq<-data.table(list(list()))
