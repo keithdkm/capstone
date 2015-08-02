@@ -11,72 +11,170 @@ library("plyr",       lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1
 setwd("~/R/Capstone")
 
 
-### FILE INFO CALCUALTIONS
-datasize <- function(file) {
-  
-  size <- object.size(file)
-  
-  nlines <- length(file)
-  
-  nwords <- sum(stri_count_words(file))
-  
-  data.frame ( as.numeric(size/2^10), nlines, nwords )
-  
-  
-}
-
-# Checks to see if original source files are loaded and loads them if required
-load.data<-function(){
- 
-setwd("~/R/Capstone")
-  if (!exists("allblogs",where = .GlobalEnv
-              )) {
-            allblogs<<- iconv(readLines("Initial Dataset/final/en_US/en_US.blogs.txt",
-                      n       = -1,
-                      skipNul = TRUE, 
-                      warn    = FALSE,
-                      encoding= "UTF-8"))
-  print("Blog data loaded")
-  # print(unlist(datasize(allblogs))) 
-  }
-  
-  
-  if (!exists("allnews")) { 
-  allnews<<- iconv(readLines("Initial Dataset/final/en_US/en_US.news.txt", 
-                     n       = -1,
-                     skipNul = TRUE, 
-                     warn    = FALSE ,
-                     encoding= "UTF-8"))
-  print("News data loaded")
-  # print(unlist(datasize(allnews))) 
-  }
-  
-  
-  if (!exists("alltwitter")) {
-  alltwitter<<- iconv(readLines("Initial Dataset/final/en_US/en_US.twitter.txt",
-                        n       = -1,
-                        skipNul = TRUE, 
-                        warn    = FALSE,
-                        encoding= "UTF-8"))
-
-  print("Twitter data loaded")
-  # print(unlist(datasize(alltwitter)))
-  }
-  
-  a<-cbind(c("en_US.blogs.txt","en_US.news.txt","en_US.twitter.txt"), rbind( datasize(allblogs),datasize(allnews),datasize(alltwitter)))
-  
-
-
-  }
-
 ## Generate n samples of size% of the entire dataset
 corpSample<-function(n,size)  {
 
-  #if needed, load the data into the environment
+  
+  # Checks to see if original source files are loaded and loads them if required
+  load.data<-function(){
+    ### FILE INFO CALCUALTIONS
+    datasize <- function(file) {
+      
+      size <- object.size(file)
+      
+      nlines <- length(file)
+      
+      nwords <- sum(stri_count_words(file))
+      
+      data.frame ( as.numeric(size/2^10), nlines, nwords )
+      
+      
+    }
+    setwd("~/R/Capstone")
+    if (!exists("allblogs")) {
+      allblogs<<- iconv(readLines("Initial Dataset/final/en_US/en_US.blogs.txt",
+                                  n       = -1,
+                                  skipNul = TRUE, 
+                                  warn    = FALSE,
+                                  encoding= "UTF-8"))
+      print("Blog data loaded")
+      # print(unlist(datasize(allblogs))) 
+    }
+    
+    
+    if (!exists("allnews")) { 
+      allnews<<- iconv(readLines("Initial Dataset/final/en_US/en_US.news.txt", 
+                                 n       = -1,
+                                 skipNul = TRUE, 
+                                 warn    = FALSE ,
+                                 encoding= "UTF-8"))
+      print("News data loaded")
+      # print(unlist(datasize(allnews))) 
+    }
+    
+    
+    if (!exists("alltwitter")) {
+      alltwitter<<- iconv(readLines("Initial Dataset/final/en_US/en_US.twitter.txt",
+                                    n       = -1,
+                                    skipNul = TRUE, 
+                                    warn    = FALSE,
+                                    encoding= "UTF-8"))
+      
+      print("Twitter data loaded")
+      # print(unlist(datasize(alltwitter)))
+    }
+    
+    #raw.file.info<<-cbind(c("en_US.blogs.txt","en_US.news.txt","en_US.twitter.txt"), rbind( datasize(allblogs),datasize(allnews),datasize(alltwitter)))
+    
+    
+    
+  }
+ 
+   
+  # Cleans the data stream to clean the data streams.  Intitially we wil remove 
+  # Remove any whitespace beyond a single space between words 
+  clean<-function(x,stopw){
+    
+    
+    #Identifies periods that are teh tnd of sentecnes
+    eos<-function( )
+    {}
+    
+    
+    
+    
+    tagwords<-content_transformer(function(x,pattern, replacement) {gsub(pattern,
+                                                                         replacement,
+                                                                         x, 
+                                                                         ignore.case = TRUE) })
+    
+    if(!dir.exists("Results")) dir.create("Results")
+    
+    
+    con<-file("~/R/Capstone/Results/clean_text.txt","wt")
+    writeLines("\nRAW TEXT", con)
+    writeLines(substring(x[[1]]$content,1,4000),con)
+ 
+    replacechars<-content_transformer(function(x,pattern,new) gsub(pattern, 
+                                                                   new, 
+                                                                   x))
+
+    #replace <> so that I can use the <> characters for tagging
+    x<-tm_map(x, replacechars, '[<>]+', ".") 
+    writeLines("\nRemove other <> characters\n", con)
+    writeLines(substring(x[[1]]$content,1,4000),con)
+    
+    # Tag any words appearing on Google's list of profane words  
+    conf<-file("~/R/Capstone/Required Data/dirty.txt",'r')
+    profanity<-paste0("\\b",paste(readLines(conf),collapse = "|"),"\\b")
+    close(conf)
+    x<-tm_map(x,tagwords, profanity,replacement = " <P> ")
+    writeLines("\nReplace profanity with a <p> tag\n", con)
+    writeLines(substring(x[[1]]$content,1,4000),con)
+    
+
+#     
+#     #convert to Lower
+#     x<-tm_map(x,content_transformer(tolower))
+    
+   
+    #remove stopwords
+    if (stopw) {
+      x<-tm_map(x, removeWords, stopwords("en"))
+      writeLines("\nRemove stop words\n", con)
+      writeLines(substring(x[[1]]$content,1,4000),con)}
+    
+    #replace all sentence ending chars with newline
+    x<-tm_map(x, replacechars, '[.?!]+ ',              " <e>\n<s> ") 
+    writeLines("\nReplace sentence endings with newlines\n", con)
+    writeLines(substring(x[[1]]$content,1,4000),con)
+    
+#     #remove apostrohes from contractions 
+#     x<-tm_map(x, replacechars, '[\'\`]',      "" )  
+#     writeLines("\nRemove apostrohes", con)
+#     writeLines(substring(x[[1]]$content,1,4000),con)
+    
+    #   x<-tm_map(x, replacechars, '[@][a-zA-Z]+',"\n")  #remove twitter names
+    #   x<-tm_map(x, replacechars, '[#][a-zA-Z]+',"\n")  #remove twitter hashtags
+    
+    #All other stop characters and numerics replace with a period to force tokenizer 
+    x<-tm_map(x, replacechars, '[0-9()\"“”:;,]', ".") 
+    writeLines("\nRemove other stop characters\n", con)
+    writeLines(substring(x[[1]]$content,1,4000),con)
+    
+    #remove all other unknown chars 
+    x<-tm_map(x, replacechars, '[^a-zA-Z. \n<>]',         "")  
+    writeLines("\nRemove other unknown characters\n", con)
+    writeLines(substring(x[[1]]$content,1,4000),con)
+    
+    #Remove single letters that are not valid single letters 
+    x<-tm_map(x, replacechars, '[ ][^AaIi\n][ ]',       ".") 
+    writeLines("\nRemove invalid single characters\n", con)
+    writeLines(substring(x[[1]]$content,1,4000),con)
+    
+    #remove extra whitespace 
+    x<-tm_map(x, replacechars, '[ ][ ]+', " ") 
+    writeLines("\nRemove additional whitespace characters\n", con)
+    writeLines(substring(x[[1]]$content,1,4000),con)
+    close(con)
+    return(x)
+    
+  }
+  
+  
+
   
   started.at = proc.time()
   
+  print(paste0("Loading Raw Data starting at ", Sys.time()))
+  
   load.data()
+  
+  load.time<<-timetaken(started.at)
+  
+  cat("Loaded entire corpus in ",load.time,"\n") 
+  
+  started.at = proc.time()
   
   setwd("~/R/Capstone")
 
@@ -89,8 +187,6 @@ corpSample<-function(n,size)  {
   blogsize    = round(size * length(allblogs))
   newssize    = round(size * length(allnews))
   twittersize = round(size * length(alltwitter))
-
-
 
   set.seed(12051105)
 
@@ -129,121 +225,45 @@ corpSample<-function(n,size)  {
     
     saveRDS(test.samp, file = file.name.test)
     
-    print(paste0("Sample", i, "saved"))
+    print(paste0("Sample ", i, " saved"))
     
     }
 
+  samp.time <<- timetaken(started.at)
+  
   print(paste("Generated, Cleaned and Saved ",
               n,
-              " Sample Corpuses, each representing ", 
-              as.character(size*100)," percent of the full text in ",
-              timetaken(started.at)))
+              " Samples, each representing ", 
+              as.character(size*100),
+              " percent of the full text and a correpsonding set of Test Data",
+              samp.time))
 
   
 }
 
-# Cleans the data stream to clean the data streams.  Intitially we wil remove 
-# Remove any whitespace beyond a single space between words  
+##Divides table of ngrams into separate tables and calculates the frequency
+make.ngrams<-function(min.ng,max.ng,n,size){
 
-clean<-function(x,stopw){
-
-  
-  #Identifies periods that are teh tnd of sentecnes
-  eos<-function( )
-  {}
-  
+   #Returns ngram count for each ngram
+  extr_ngram_counts<-function(tdm) {
     
-  if(!dir.exists("Results")) dir.create("Results")
-  
-
-  con<-file("~/R/Capstone/Results/clean_text.txt","wt")
-  writeLines("\nRAW TEXT", con)
-  writeLines(substring(x[[1]]$content,1,600),con)
-
-  # Remove any words appearing on Google's list of profane words  
-  conf<-file("~/R/Capstone/Required Data/dirty.txt",'r')
-  profanity<-readLines(conf)
-  close(conf)
-  x<-tm_map(x,removeWords,profanity)
-  
-    #open file to send text samples to
-  replacechars<-content_transformer(function(x,pattern,new) gsub(pattern, new, x))
-  
-  #convert to Lower
-  x<-tm_map(x,content_transformer(tolower))
-  
-  #remove stopwords
-  if (stopw) {
-    x<-tm_map(x, removeWords, stopwords("en"))
-    writeLines("\nRemove stop words", con)
-    writeLines(substring(x[[1]]$content,1,600),con)}
-  
-  #replace all sentence ending chars with newline
-  x<-tm_map(x, replacechars, '[.?!]+[ ]',              "</s> <s>") 
-  writeLines("Replace sentence endings with newlines", con)
-  writeLines(substring(x[[1]]$content,1,600),con)
-  
-  #remove apostrohes from contractions 
-  x<-tm_map(x, replacechars, '[\'\`]',      "" )  
-  writeLines("\nRemove apostrohes", con)
-  writeLines(substring(x[[1]]$content,1,600),con)
-  
-  #   x<-tm_map(x, replacechars, '[@][a-zA-Z]+',"\n")  #remove twitter names
-  #   x<-tm_map(x, replacechars, '[#][a-zA-Z]+',"\n")  #remove twitter hashtags
-  
-  #All other stop characters and numerics replace with a period
-  x<-tm_map(x, replacechars, '[0-9()\"“”:;,]', ".") 
-  writeLines("\nRemove other stop chararcters", con)
-  writeLines(substring(x[[1]]$content,1,600),con)
-  
-  #remove all other unknown chars 
-  x<-tm_map(x, replacechars, '[^a-z. \n]',         "")  
-  writeLines("\nRemove other unknown chararcters", con)
-  writeLines(substring(x[[1]]$content,1,600),con)
-  
-  #Remove single letters that are not valid single letters 
-  x<-tm_map(x, replacechars, '[ ][^AaIi\n][ ]',       ".") 
-  writeLines("\nRemove invalid single chars", con)
-  writeLines(substring(x[[1]]$content,1,600),con)
-  
-  #remove extra whitespace 
-  x<-tm_map(x, replacechars, '[ ][ ]+', " ") 
-  writeLines("\nRemove additional whitespace", con)
-  writeLines(substring(x[[1]]$content,1,600),con)
-  close(con)
-  return(x)
-  
-}
-
-
-# Tokenizer control generates ngrams of length min to max 
-Tokenizer <- function(min,max, delims) 
-  {NGramTokenizer(x, 
-                                          Weka_control(min = min, 
-                                                       max = max,
-                                                       delimiters = delims))}
-
-#Returns ngram count for each ngram
-ngramcoverage<-function(tdm) {
-  
-  tdm<-as.matrix(tdm)
-  
-  word.freq <- data.table(wordi = row.names(tdm), count = tdm[,1], sample = i) 
+    tdm<-as.matrix(tdm)
     
-  #word.freq [, wordcount := stri_count_words(ngram)]
+    word.freq <- data.table(wordi = row.names(tdm), count = tdm[,1], sample = i) 
+
+    word.freq
+  }
   
-  word.freq
-}
-
-
-###################################################  MAIN PROCESSING STARTS HERE
-#################################################################################
-
-make.ngrams<-function(){
-
-started.at = proc.time()
+  # Tokenizer control generates ngrams of length min to max 
+  Tokenizer <- function(x) {
+                            NGramTokenizer(x, 
+                                            Weka_control(min        = min.ng, 
+                                                         max        = max.ng,
+                                                         delimiters = " .\n)"))}
   
-  ngramfreq<-data.table(list(list()))
+  started.at = proc.time()
+  
+  ngramfreq<-data.table(NULL)
   
   for (i in 1:n) {
     
@@ -255,72 +275,51 @@ started.at = proc.time()
     
     print(paste("Processing Sample", i, " of ",size,"percent at", Sys.time())) 
     
-    tdm <- TermDocumentMatrix(tr.samp, 
-                              control = list(wordLengths = c(1,Inf),
-                                             tokenize    = Tokenizer(min    = 1,
-                                                                     max    = 3,
-                                                                     delims = " .\n"))) ; rm(tr.samp)
+    tdm <- TermDocumentMatrix(tr.samp, control = list(wordLengths = c(1,Inf),
+                                                      tokenize    = Tokenizer)) ; rm(tr.samp)
     
-    ngramfreq<-rbind(ngramfreq,ngramcoverage(tdm),fill=TRUE) ; rm(tdm)
+    ngramfreq<-rbind(ngramfreq,extr_ngram_counts(tdm),fill=TRUE) ; rm(tdm)
     
   }
 
-
-  
-#   ngramfreq[, numwords := stri_count_words(wordi) ]
-# 
-#   setkey(ngramfreq,numwords,wordi)
-#   
-#   unigrams<- ngramfreq[numwords == 1, .(count = sum(count)) , by = .(wordi)][,probability := log10(count/sum(count))]
-#   
-#   setkey(unigrams,wordi)
-#   
-#   bigrams <- ngramfreq[numwords == 2, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2") := tstrsplit(wordi, " ", fixed = TRUE)]
-#   
-#   setkey(bigrams,wordi)
-#   
-#   # bigrams[,pw2_w1 := log10(count/unigrams[stri_extract_first_words(bigrams$wordi),count])]
-#   
-#   bigrams[,pw2_w1 := log10(count/unigrams[bigrams$W1,count])]
-#   
-#   trigrams <- ngramfreq[numwords == 3, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2:=paste0(W1," ",W2)]
-#   
-#   setkey(trigrams,W1W2)
-#   
-#   trigrams[, pw3_w2w1 := log10(count/ bigrams[trigrams$W1W2, count])]
-#   
-  # quadgrams <- ngramfreq[numwords == 4, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3","W4") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2W3:=paste0(W1," ",W2," ",W3)]
-
- 
   ngramfreq[, numwords := stri_count_words(wordi) ]
 
   setkey(ngramfreq,numwords,wordi)
   
-  unigrams<- ngramfreq[numwords == 1, .(count = sum(count)) , by = .(wordi)][,probability := log10(count/sum(count))]
+  # UNIGRAMS
   
-  setkey(unigrams,wordi)
+  if (max.ng>0) unigrams<<- ngramfreq[numwords == 1, .(count = sum(count)) , by = .(wordi)][,probability := -log2(count/sum(count))]
   
-  bigrams <- ngramfreq[numwords == 2, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2") := tstrsplit(wordi, " ", fixed = TRUE)]
+                setkey(unigrams,wordi)
   
-  setkey(bigrams,wordi)
+  #BIGRAMS
   
-  # bigrams[,pw2_w1 := log10(count/unigrams[stri_extract_first_words(bigrams$wordi),count])]
+  if (max.ng>1) {bigrams <<- ngramfreq[numwords == 2, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2") := tstrsplit(wordi, " ", fixed = TRUE)]
   
-  bigrams[,pw2_w1 := log10(count/unigrams[bigrams$W1,count])]
+                  setkey(bigrams,wordi)
+                  
+                  bigrams[,pw2_w1 := -log2(count/unigrams[bigrams$W1,count])]}
+    
+  #TRIGRAMS
   
-  trigrams <- ngramfreq[numwords == 3, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2:=paste0(W1," ",W2)]
+  if (max.ng > 2) {trigrams <<- ngramfreq[numwords == 3, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2:=paste0(W1," ",W2)]
   
-  setkey(trigrams,W1W2)
-  
-  trigrams[, pw3_w2w1 := log10(count/ bigrams[trigrams$W1W2, count])]
-  
-  quadgrams <- ngramfreq[, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3","W4") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2W3:=paste0(W1," ",W2," ",W3)]
-  
-  setkey(quadgrams,W1W2W3)
-  
-  # quadgrams[,p4_w3w2w1 := log10(count/ trigrams[quadgrams$W1W2W3, count])]
+                    setkey(trigrams,W1W2)
+                    
+                    trigrams[, pw3_w2w1 := -log2(count/ bigrams[trigrams$W1W2, count])]}
+                
 
-  quadgrams[,p4_w3w2w1 := log10(count)]
+  #QUADRIGRAMS
+                
+  if (max.ng > 3) {quadrigrams <<- ngramfreq[numwords == 4, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3","W4") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2W3:=paste0(W1," ",W2," ",W3)]
+  
+                    setkey(quadrigrams,W1W2W3)
+                    
+                    quadrigrams[,p4_w3w2w1 := log10(count/ trigrams[quadrigrams$W1W2W3, count])]
+                  
+                    quadrigrams[,p4_w3w2w1 := log10(count)]}
+                    
+                    ngram.time<<-timetaken(started.at)
   
   cat("Finished ",n,"samples in ",timetaken(started.at),"\n") 
   
@@ -329,24 +328,94 @@ started.at = proc.time()
 
 # Predicts wnext word from a phrase x 
 phrase <-  function(x) {
-     
-     if (stri_count_words(x)  == 1) 
-       phrase<-quadgrams[W1==x,.(count = .N, phrase =  paste(W1,W2)),by = .(W1,W2)][order(-count)[1], phrase]
-     
-     if (stri_count_words(x)  == 2) 
-       phrase<-quadgrams[W1==strsplit(x," ")[[1]][1] & W2 == strsplit(x," ")[[1]][2], .(count = .N, phrase =  paste(W1,W2,W3)),by = .(W1,W2,W3)][order(-count)[1], phrase]
-     
-     if (stri_count_words(x)  == 3) 
+  
+  
+        x<-tolower(x)
+  
+       if (stri_count_words(x)  == 1) 
+         phrase<-bigrams[W1==x, .(wordi,pw2_w1)][order(pw2_w1)[1:3],wordi]
        
-       phrase<- quadgrams [as.character(x), ][order(-count),wordi]
+       if (stri_count_words(x)  == 2) 
+         phrase<-trigrams[W1==strsplit(x," ")[[1]][1] & W2 == strsplit(x," ")[[1]][2], .(wordi,pw3_w2w1)][order(pw3_w2w1)[1:3], wordi]
+        
+       if (stri_count_words(x)  == 3) 
+         phrase<-quadrigrams[W1==strsplit(x," ")[[1]][1] & W2 == strsplit(x," ")[[1]][2] & W2 == strsplit(x," ")[[1]][3], .(wordi,pw4_w3w2w1)][order(pw4_w3w2w1)[1:3], wordi]
+       
+  
+#      if (stri_count_words(x)  == 1) 
+#        phrase<-quadgrams[W1==x,.(count = .N, phrase =  paste(W1,W2)),by = .(W1,W2)][order(-count)[1], phrase]
+#      
+#      if (stri_count_words(x)  == 2) 
+#        phrase<-quadgrams[W1==strsplit(x," ")[[1]][1] & W2 == strsplit(x," ")[[1]][2], .(count = .N, phrase =  paste(W1,W2,W3)),by = .(W1,W2,W3)][order(-count)[1], phrase]
+#      
+#      if (stri_count_words(x)  == 3)        
+#        phrase<- quadgrams [as.character(x), ][order(-count),wordi]
    
    phrase}
+
 
 #Calculates the perplexity of model x against the corpus y
 perplexity <-function(x,y) {
   
   
 }
+
+
+main<-function(resamp,num.sample, sz.sample, ng.size) {
+  
+  ## Summary Results are stored in the masterlsit file
+  # rm(GlobalEnv::unigrams);rm(trigrams);rm(bigrams);rm(results)
+              
+  Exec.time<-Sys.time()
+
+  if (resamp) corpSample(num.sample,sz.sample)
+  
+  make.ngrams(min = 1, max = ng.size, num.sample, sz.sample)
+  
+  new_results<-list(Time        = strftime(Exec.time, "%c"), 
+                    N           = paste(num.sample,"samples"), 
+                    Size        = paste0(sz.sample,"%"),
+                    Load.Time   = load.time,
+                    Sample.Time = samp.time,
+                    Ngram.Time  = ngram.time,
+                    N.unigrams  = unigrams[,.N],
+                    U.size      = paste0(round(object.size(unigrams)/10^6,2),"Mb"),
+                    N.bigrams   = bigrams[,.N],
+                    bi.size     = paste0(round(object.size(bigrams)/10^6,2),"Mb"),
+                    N.trigrams  = ifelse(exists("trigrams"),trigrams[,.N],0),
+                    tri.size    = ifelse(exists("trigrams"),paste0(round(object.size(trigrams)/10^6,2),"Mb"), "0Mb"),
+                    N.quadrigrams  = ifelse(exists("quadrigrams"),quadrigrams[,.N],0),
+                    quad.size    = ifelse(exists("quadrigrams"),paste0(round(object.size(quadrigrams)/10^6,2),"Mb"), "0Mb"))
+  
+  
+  ifelse (file.exists("~/R/Capstone/Results/masterlist.RDS"),
+          x<-readRDS("~/R/Capstone/Results/masterlist.RDS"),
+          x<-data.table(NULL))
+
+  results<<- rbind(x,  data.table(t(new_results)))
+  
+  saveRDS(results,"~/R/Capstone/Results/masterlist.RDS")
+  
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   #
   # bigrams<-ngramfreq[, totalcount := sum(count) , by = .(wordi)][, numwords := stri_count_words(wordi), ][,pwiw1 := log10(totalcount)-log10(unigrams[stri_extract_first_words(ngramfreq$wordi),count])]
@@ -384,3 +453,29 @@ perplexity <-function(x,y) {
 #   
 #   identical(a1, a2) # TRUE
 #   identical(a1, a3) # TRUE
+
+
+#   ngramfreq[, numwords := stri_count_words(wordi) ]
+# 
+#   setkey(ngramfreq,numwords,wordi)
+#   
+#   unigrams<- ngramfreq[numwords == 1, .(count = sum(count)) , by = .(wordi)][,probability := log10(count/sum(count))]
+#   
+#   setkey(unigrams,wordi)
+#   
+#   bigrams <- ngramfreq[numwords == 2, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2") := tstrsplit(wordi, " ", fixed = TRUE)]
+#   
+#   setkey(bigrams,wordi)
+#   
+#   # bigrams[,pw2_w1 := log10(count/unigrams[stri_extract_first_words(bigrams$wordi),count])]
+#   
+#   bigrams[,pw2_w1 := log10(count/unigrams[bigrams$W1,count])]
+#   
+#   trigrams <- ngramfreq[numwords == 3, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2:=paste0(W1," ",W2)]
+#   
+#   setkey(trigrams,W1W2)
+#   
+#   trigrams[, pw3_w2w1 := log10(count/ bigrams[trigrams$W1W2, count])]
+#   
+# quadgrams <- ngramfreq[numwords == 4, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3","W4") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2W3:=paste0(W1," ",W2," ",W3)]
+
