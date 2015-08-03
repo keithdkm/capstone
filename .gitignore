@@ -9,4 +9,5 @@ Raw Data/
 Milestone_Report_cache/
 Debug/
 *.html
-
+.Rhistory
+.RData
