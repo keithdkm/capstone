@@ -136,21 +136,21 @@ corpSample<-function(n,size)  {
     writeLines("\nReplace sentence endings with newlines\n", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
-#     #remove apostrohes from contractions 
-#     x<-tm_map(x, replacechars, '[\'\`]',      "" )  
-#     writeLines("\nRemove apostrohes", con)
-#     writeLines(substring(x[[1]]$content,1,4000),con)
+    #remove apostrohes from contractions 
+    x<-tm_map(x, replacechars, '[\'\`]',      "" )  
+    writeLines("\nRemove apostrohes", con)
+    writeLines(substring(x[[1]]$content,1,4000),con)
     
     #   x<-tm_map(x, replacechars, '[@][a-zA-Z]+',"\n")  #remove twitter names
     #   x<-tm_map(x, replacechars, '[#][a-zA-Z]+',"\n")  #remove twitter hashtags
     
     #All other stop characters and numerics replace with a period to force tokenizer 
-    x<-tm_map(x, replacechars, '[0-9()\"“”:;,]', ".") 
+    x<-tm_map(x, replacechars, '[0-9()\"“”\':;,]', ".") 
     writeLines("\nRemove other stop characters\n", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
     #remove all other unknown chars 
-    x<-tm_map(x, replacechars, '[^a-zA-Z. \n<>\'-]',         "")  
+    x<-tm_map(x, replacechars, '[^a-zA-Z. \n<>-]',         "")  
     writeLines("\nRemove other unknown characters\n", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
@@ -308,7 +308,7 @@ make.ngrams<-function(min.ng,max.ng,n,size){
   
   if (max.ng>1) {bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(wordi)][, c("W1", "W2") := tstrsplit(wordi, " ", fixed = TRUE)]
   
-                  setkey(bigrams,wordi)
+                  setkey(bigrams,W1)
                   
                   bigrams[,pw2_w1 := -log2(count/unigrams[bigrams$W1,count])]}
     
@@ -343,34 +343,28 @@ phrase <-  function(x) {
   
   
         x<-tolower(x)
- 
-      
+         
+        # phrase <- ""
         phrase.length <- stri_count_words(x) 
         
         if (phrase.length == 3) 
           phrase<-quadrigrams[x, .(wordi,pw4_w3w2w1)][order(pw4_w3w2w1)[1:3], wordi]
         
-        if (is.na(phrase)) {phrase <- paste(stri_extract_all_words(x)[[1]][2:3], collapse = " ") ; phrase.length<-phrase.length-1}
+        if (is.na(phrase[1])) {phrase <- paste(stri_extract_all_words(x)[[1]][2:3], collapse = " ") ; phrase.length<-phrase.length-1; print("Backing off to trigrams")}
         
         if ( phrase.length  == 2) 
           phrase<-trigrams[x , .(wordi,pw3_w2w1)][order(pw3_w2w1)[1:3], wordi]
 
-        if (is.na(phrase)) {phrase <- paste(stri_extract_all_words(x)[[1]][2], collapse = " ") ; phrase.length<-phrase.length-1}
+        if (is.na(phrase[1])) {phrase <- paste(stri_extract_all_words(x)[[1]][2], collapse = " ") ; phrase.length<-phrase.length-1; print("Backing off to bigrams")}
         
         if ( phrase.length  == 1) 
          phrase<-bigrams[x, .(wordi,pw2_w1)][order(pw2_w1)[1:3],wordi]
        
+        if (is.na(phrase[1])) { phrase.length<-phrase.length-1; print("Backing off to unigrams")}
         
-       
-  
-#      if (stri_count_words(x)  == 1) 
-#        phrase<-quadgrams[W1==x,.(count = .N, phrase =  paste(W1,W2)),by = .(W1,W2)][order(-count)[1], phrase]
-#      
-#      if (stri_count_words(x)  == 2) 
-#        phrase<-quadgrams[W1==strsplit(x," ")[[1]][1] & W2 == strsplit(x," ")[[1]][2], .(count = .N, phrase =  paste(W1,W2,W3)),by = .(W1,W2,W3)][order(-count)[1], phrase]
-#      
-#      if (stri_count_words(x)  == 3)        
-#        phrase<- quadgrams [as.character(x), ][order(-count),wordi]
+        if (phrase.length == 0)
+         phrase<-unigrams[order(probability),wordi ][1:3]
+
    
    phrase}
 
