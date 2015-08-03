@@ -423,9 +423,13 @@ main<-function(resamp,num.sample, sz.sample, ng.size) {
   
   make.ngrams(min = 1, max = ng.size, num.sample, sz.sample)
   
-  new_results<-list(Time        = strftime(Exec.time, "%c"), 
+  repo<-repository("~/R/Capstone/")
+  
+  new_results<-list(Time        = strftime(Exec.time, "%c"),
+                    Commit      = substr(branch_target(head(repo)),1,8),
                     N           = paste(num.sample,"samples"), 
                     Size        = paste0(sz.sample,"%"),
+                    Model.Size  = ng.size,
                     Load.Time   = load.time,
                     Sample.Time = samp.time,
                     Ngram.Time  = ngram.time,
