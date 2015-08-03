@@ -104,18 +104,24 @@ corpSample<-function(n,size)  {
     writeLines("\nRemove other <> characters\n", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
+    
+    
+    #convert to Lower
+    x<-tm_map(x,content_transformer(tolower))
+    
+    
     # Tag any words appearing on Google's list of profane words  
     conf<-file("~/R/Capstone/Required Data/dirty.txt",'r')
-    profanity<-paste0("\\b",paste(readLines(conf),collapse = "|"),"\\b")
+    # profanity<-paste0("\\b",paste0(readLines(conf),collapse = "|"),"\\b")
+    profanity<-readLines(conf)
     close(conf)
-    x<-tm_map(x,tagwords, profanity,replacement = " <P> ")
+    # x<-tm_map(x,tagwords, profanity,replacement = " <P> ")
+    x<-tm_map(x,removeWords,profanity)
     writeLines("\nReplace profanity with a <p> tag\n", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
 
-#     
-#     #convert to Lower
-#     x<-tm_map(x,content_transformer(tolower))
+# 
     
    
     #remove stopwords
@@ -143,7 +149,7 @@ corpSample<-function(n,size)  {
     writeLines(substring(x[[1]]$content,1,4000),con)
     
     #remove all other unknown chars 
-    x<-tm_map(x, replacechars, '[^a-zA-Z. \n<>]',         "")  
+    x<-tm_map(x, replacechars, '[^a-zA-Z. \n<>\'-]',         "")  
     writeLines("\nRemove other unknown characters\n", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
@@ -203,6 +209,9 @@ corpSample<-function(n,size)  {
   twitter.inds    <-   matrix(sample(x  = length(alltwitter), 
                                      size    = 2 * n * twittersize, 
                                      replace = FALSE), nrow = 2 * n , ncol = twittersize)
+  
+  test.Corpus <<- VCorpus(VectorSource(NULL))
+  
   for (i in 1:n){
 
     tr.samp   = paste(paste(allblogs[blogs.inds[i,]],collapse = " "),
@@ -216,6 +225,8 @@ corpSample<-function(n,size)  {
     tr.samp   <- clean(VCorpus(VectorSource(tr.samp)),FALSE)
     
     test.samp <- clean(VCorpus(VectorSource(test.samp)),FALSE)
+    
+    test.Corpus <<- c(test.Corpus,test.samp)   ########experimental
     
     file.name.tr<-paste0("Sample Data/trsamp_",i,"_",size*100,".RDS")
     
@@ -315,9 +326,9 @@ make.ngrams<-function(min.ng,max.ng,n,size){
   
                     setkey(quadrigrams,W1W2W3)
                     
-                    quadrigrams[,p4_w3w2w1 := log10(count/ trigrams[quadrigrams$W1W2W3, count])]
+                    quadrigrams[,pw4_w3w2w1 := -log2(count/ trigrams[quadrigrams$W1W2W3, count])]}
                   
-                    quadrigrams[,p4_w3w2w1 := log10(count)]}
+                    # quadrigrams[,p4_w3w2w1 := log10(count)]
                     
                     ngram.time<<-timetaken(started.at)
   
@@ -331,15 +342,24 @@ phrase <-  function(x) {
   
   
         x<-tolower(x)
-  
-       if (stri_count_words(x)  == 1) 
-         phrase<-bigrams[W1==x, .(wordi,pw2_w1)][order(pw2_w1)[1:3],wordi]
-       
-       if (stri_count_words(x)  == 2) 
-         phrase<-trigrams[W1==strsplit(x," ")[[1]][1] & W2 == strsplit(x," ")[[1]][2], .(wordi,pw3_w2w1)][order(pw3_w2w1)[1:3], wordi]
+ 
+      
+        phrase.length <- stri_count_words(x) 
         
-       if (stri_count_words(x)  == 3) 
-         phrase<-quadrigrams[W1==strsplit(x," ")[[1]][1] & W2 == strsplit(x," ")[[1]][2] & W2 == strsplit(x," ")[[1]][3], .(wordi,pw4_w3w2w1)][order(pw4_w3w2w1)[1:3], wordi]
+        if (phrase.length == 3) 
+          phrase<-quadrigrams[x, .(wordi,pw4_w3w2w1)][order(pw4_w3w2w1)[1:3], wordi]
+        
+        if (is.na(phrase)) {phrase <- paste(stri_extract_all_words(x)[[1]][2:3], collapse = " ") ; phrase.length<-phrase.length-1}
+        
+        if ( phrase.length  == 2) 
+          phrase<-trigrams[x , .(wordi,pw3_w2w1)][order(pw3_w2w1)[1:3], wordi]
+
+        if (is.na(phrase)) {phrase <- paste(stri_extract_all_words(x)[[1]][2], collapse = " ") ; phrase.length<-phrase.length-1}
+        
+        if ( phrase.length  == 1) 
+         phrase<-bigrams[x, .(wordi,pw2_w1)][order(pw2_w1)[1:3],wordi]
+       
+        
        
   
 #      if (stri_count_words(x)  == 1) 
@@ -354,11 +374,42 @@ phrase <-  function(x) {
    phrase}
 
 
-#Calculates the perplexity of model x against the corpus y
-perplexity <-function(x,y) {
+#Calculates the perplexity of model x,against the cleaned corpus y.  X shoudl indicate the maximum length of trigrams to use
+perplexity <-function(y) {
   
   
-}
+  a<-unlist(stri_split_regex(y[[1]]$content,"<e>\n<s>"))
+  
+  c<-data.frame(t(sapply(a[1:200], function(x){ word.count <- stri_count_words(x);
+                            
+                            b<-stri_extract_all_words(x)[[1]][1:2]
+                            
+                            phr.prob <- sum(trigrams[paste0("<e> <s> ",b[1]),pw3_w2w1],
+                                       trigrams[paste0("<s> ",b[1]," ",b[2]),pw3_w2w1],na.rm = TRUE)
+                            
+                            if(word.count>2) {b <- NGramTokenizer(x,     
+                                               Weka_control(min        = 3, 
+                                                            max        = 3,
+                                                            delimiters = ". "));
+                            
+                            
+                            phr.prob <- sum(phr.prob, sum(sapply(b, 
+                                                   function(z) {
+                                                     trigrams[z,pw3_w2w1]}),na.rm=TRUE),na.rm=TRUE)
+                            
+                            }
+                                            
+                            
+                            data.frame(sentence = x,
+                                        M = word.count,
+                                        sent.prob = phr.prob)})))
+
+   
+  sum(unlist(c$sent.prob))/sum(unlist(c$M))
+  
+  }
+
+
 
 
 main<-function(resamp,num.sample, sz.sample, ng.size) {
@@ -385,7 +436,8 @@ main<-function(resamp,num.sample, sz.sample, ng.size) {
                     N.trigrams  = ifelse(exists("trigrams"),trigrams[,.N],0),
                     tri.size    = ifelse(exists("trigrams"),paste0(round(object.size(trigrams)/10^6,2),"Mb"), "0Mb"),
                     N.quadrigrams  = ifelse(exists("quadrigrams"),quadrigrams[,.N],0),
-                    quad.size    = ifelse(exists("quadrigrams"),paste0(round(object.size(quadrigrams)/10^6,2),"Mb"), "0Mb"))
+                    quad.size    = ifelse(exists("quadrigrams"),paste0(round(object.size(quadrigrams)/10^6,2),"Mb"), "0Mb"), 
+                    Perplexity  =  perplexity(test.samp))
   
   
   ifelse (file.exists("~/R/Capstone/Results/masterlist.RDS"),
@@ -396,20 +448,24 @@ main<-function(resamp,num.sample, sz.sample, ng.size) {
   
   saveRDS(results,"~/R/Capstone/Results/masterlist.RDS")
   
+  
+  
+  
   }
 
 
 
 
-
-
-
-
-
-
-
-
-
+# 
+# test.samp<-VCorpus(VectorSource(""))
+# for(a in 1:100){
+#   test.samp<-c(test.samp,readRDS(paste0("Test Data/testsamp_",a,"_",0.1,".RDS" )))}
+# 
+# 
+# 
+# 
+# 
+# 
 
 
 
