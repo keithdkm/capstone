@@ -72,6 +72,9 @@ setwd("~/R/Capstone")
 corpSample<-function(n,size)  {
 
   #if needed, load the data into the environment
+  
+  started.at = proc.time()
+  
   load.data()
   
   setwd("~/R/Capstone")
@@ -86,7 +89,10 @@ corpSample<-function(n,size)  {
   newssize    = round(size * length(allnews))
   twittersize = round(size * length(alltwitter))
 
-  set.seed(11051205)
+
+
+  set.seed(12051105)
+
   
   
   blogs.inds      <-   matrix(sample(x  = length(allblogs), 
@@ -126,7 +132,12 @@ corpSample<-function(n,size)  {
     
     }
 
-  print(paste("Generated, Cleaned and Saved ",n," Sample Corpuses, each representing ", as.character(size*100)," percent of the full text"))
+  print(paste("Generated, Cleaned and Saved ",
+              n,
+              " Sample Corpuses, each representing ", 
+              as.character(size*100)," percent of the full text in ",
+              timetaken(started.at)))
+
   
 }
 
@@ -143,6 +154,7 @@ clean<-function(x,stopw){
     
   if(!dir.exists("Results")) dir.create("Results")
   
+
   con<-file("~/R/Capstone/Results/clean_text.txt","wt")
   writeLines("\nRAW TEXT", con)
   writeLines(substring(x[[1]]$content,1,600),con)
@@ -210,6 +222,7 @@ clean<-function(x,stopw){
   
 }
 
+
 # Tokenizer control generates ngrams of length min to max 
 Tokenizer <- function(min,max, delims) 
   {NGramTokenizer(x, 
@@ -229,20 +242,26 @@ ngramcoverage<-function(tdm) {
   word.freq
 }
 
+
+###################################################  MAIN PROCESSING STARTS HERE
+#################################################################################
+
 make.ngrams<-function(){
+
+
 started.at = proc.time()
   
   ngramfreq<-data.table(list(list()))
   
   for (i in 1:n) {
     
-    file.name<-paste0("~/R/Capstone/Sample Data/Sample Data 500x0.05/trsamp_",i,"_",as.character(size),".RDS")
+    file.name<-paste0("~/R/Capstone/Sample Data/trsamp_",i,"_",as.character(size),".RDS")
     
     print(paste0("Reading ", file.name))
     
     tr.samp<-readRDS(file.name)  # Read in hte corpus of prepared samples
     
-    print(paste("Processing Sample", i, " of ",size,"percent " )) 
+    print(paste("Processing Sample", i, " of ",size,"percent at", Sys.time())) 
     
     tdm <- TermDocumentMatrix(tr.samp, 
                               control = list(wordLengths = c(1,Inf),
@@ -253,6 +272,33 @@ started.at = proc.time()
     ngramfreq<-rbind(ngramfreq,ngramcoverage(tdm),fill=TRUE) ; rm(tdm)
     
   }
+
+
+  
+#   ngramfreq[, numwords := stri_count_words(wordi) ]
+# 
+#   setkey(ngramfreq,numwords,wordi)
+#   
+#   unigrams<- ngramfreq[numwords == 1, .(count = sum(count)) , by = .(wordi)][,probability := log10(count/sum(count))]
+#   
+#   setkey(unigrams,wordi)
+#   
+#   bigrams <- ngramfreq[numwords == 2, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2") := tstrsplit(wordi, " ", fixed = TRUE)]
+#   
+#   setkey(bigrams,wordi)
+#   
+#   # bigrams[,pw2_w1 := log10(count/unigrams[stri_extract_first_words(bigrams$wordi),count])]
+#   
+#   bigrams[,pw2_w1 := log10(count/unigrams[bigrams$W1,count])]
+#   
+#   trigrams <- ngramfreq[numwords == 3, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2:=paste0(W1," ",W2)]
+#   
+#   setkey(trigrams,W1W2)
+#   
+#   trigrams[, pw3_w2w1 := log10(count/ bigrams[trigrams$W1W2, count])]
+#   
+  # quadgrams <- ngramfreq[numwords == 4, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3","W4") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2W3:=paste0(W1," ",W2," ",W3)]
+
  
   ngramfreq[, numwords := stri_count_words(wordi) ]
 
@@ -276,10 +322,12 @@ started.at = proc.time()
   
   trigrams[, pw3_w2w1 := log10(count/ bigrams[trigrams$W1W2, count])]
   
-  quadgrams <- ngramfreq[numwords == 4, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3","W4") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2W3:=paste0(W1," ",W2," ",W3)]
+  quadgrams <- ngramfreq[, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3","W4") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2W3:=paste0(W1," ",W2," ",W3)]
   
   setkey(quadgrams,W1W2W3)
   
+  # quadgrams[,p4_w3w2w1 := log10(count/ trigrams[quadgrams$W1W2W3, count])]
+
   quadgrams[,p4_w3w2w1 := log10(count)]
   
   cat("Finished ",n,"samples in ",timetaken(started.at),"\n") 
