@@ -299,13 +299,13 @@ make.ngrams<-function(min.ng,max.ng,n,size){
   
   # UNIGRAMS
   
-  if (max.ng>0) unigrams<<- ngramfreq[1, .(count = sum(count)) , by = .(wordi)][,probability := -log2(count/sum(count))]
+  if (max.ng>0) unigrams<<- ngramfreq[.(1), .(count = sum(count)) , by = .(wordi)][,probability := -log2(count/sum(count))]
   
                 setkey(unigrams,wordi)
   
   #BIGRAMS
   
-  if (max.ng>1) {bigrams <<- ngramfreq[2, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2") := tstrsplit(wordi, " ", fixed = TRUE)]
+  if (max.ng>1) {bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(wordi)][, c("W1", "W2") := tstrsplit(wordi, " ", fixed = TRUE)]
   
                   setkey(bigrams,wordi)
                   
@@ -313,7 +313,7 @@ make.ngrams<-function(min.ng,max.ng,n,size){
     
   #TRIGRAMS
   
-  if (max.ng > 2) {trigrams <<- ngramfreq[3, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2:=paste0(W1," ",W2)]
+  if (max.ng > 2) {trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2:=paste0(W1," ",W2)]
   
                     setkey(trigrams,W1W2)
                     
@@ -322,7 +322,7 @@ make.ngrams<-function(min.ng,max.ng,n,size){
 
   #QUADRIGRAMS
                 
-  if (max.ng > 3) {quadrigrams <<- ngramfreq[ 4, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3","W4") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2W3:=paste0(W1," ",W2," ",W3)]
+  if (max.ng > 3) {quadrigrams <<- ngramfreq[.(4), .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3","W4") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2W3:=paste0(W1," ",W2," ",W3)]
   
                     setkey(quadrigrams,W1W2W3)
                     
@@ -441,7 +441,7 @@ main<-function(resamp,num.sample, sz.sample, ng.size) {
                     tri.size    = ifelse(exists("trigrams"),paste0(round(object.size(trigrams)/10^6,2),"Mb"), "0Mb"),
                     N.quadrigrams  = ifelse(exists("quadrigrams"),quadrigrams[,.N],0),
                     quad.size    = ifelse(exists("quadrigrams"),paste0(round(object.size(quadrigrams)/10^6,2),"Mb"), "0Mb"), 
-                    Perplexity  =  perplexity(test.samp))
+                    Perplexity  =  perplexity(test.Corpus))
   
   
   ifelse (file.exists("~/R/Capstone/Results/masterlist.RDS"),
