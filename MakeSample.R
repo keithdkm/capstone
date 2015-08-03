@@ -7,6 +7,7 @@ library("RWeka",      lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1
 library("data.table", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("stringi",    lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("plyr",       lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("git2r",       lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 
 setwd("~/R/Capstone")
 
