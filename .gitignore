@@ -11,3 +11,5 @@ Debug/
 *.html
 .Rhistory
 .RData
+Test Data/
+Results/
