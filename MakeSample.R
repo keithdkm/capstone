@@ -76,14 +76,7 @@ corpSample<-function(n,size)  {
   # Remove any whitespace beyond a single space between words 
   clean<-function(x,stopw){
     
-    
-    #Identifies periods that are teh tnd of sentecnes
-    eos<-function( )
-    {}
-    
-    
-    
-    
+ 
     tagwords<-content_transformer(function(x,pattern, replacement) {gsub(pattern,
                                                                          replacement,
                                                                          x, 
@@ -113,11 +106,11 @@ corpSample<-function(n,size)  {
     
     # Tag any words appearing on Google's list of profane words  
     conf<-file("~/R/Capstone/Required Data/dirty.txt",'r')
-    # profanity<-paste0("\\b",paste0(readLines(conf),collapse = "|"),"\\b")
-    profanity<-readLines(conf)
+    profanity<-paste0("\\b",paste0(readLines(conf),collapse = "\\b|\\b"),"\\b")
+    #profanity<-readLines(conf)
     close(conf)
-    # x<-tm_map(x,tagwords, profanity,replacement = " <P> ")
-    x<-tm_map(x,removeWords,profanity)
+    x<-tm_map(x,tagwords, profanity,replacement = " <P> ")
+    # x<-tm_map(x,removeWords,profanity)
     writeLines("\nReplace profanity with a <p> tag\n", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
