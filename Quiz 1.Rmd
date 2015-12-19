@@ -4,6 +4,14 @@ author: "Keith Miller"
 date: "July 15, 2015"
 output: html_document
 ---
+
+```{r Read data}
+source('~/R/Capstone/MakeSample.R', encoding = 'UTF-8')
+
+setwd("~/R/Capstone")
+
+a<-load.data()
+```
 1. The en_US.blogs.txt file is `r round(file.size("Initial Dataset/final/en_US/en_US.blogs.txt")/10^6,0)` Mbytes. The en_US.news.txt file is `r round(file.size("Initial Dataset/final/en_US/en_US.news.txt")/10^6,0)` Mbytes. The en_US.twitter.txt file is `r round(file.size("Initial Dataset/final/en_US/en_US.twitter.txt")/10^6,0)` Mbytes
 2. The en_US.blogs.txt has `r format(length(allblogs),big.mark=',')` lines. The en_US.news.txt has `r format(length(allnews),big.mark=',')` lines.  The en_US.twitter.txt has `r format(length(alltwitter),big.mark=',')` lines.
 3. The maximum length of a line in the blog file is `r max(nchar(allblogs))` characters.  The maximum length of a line in the news file is `r max(nchar(allnews))` characters.  The maximum length of a line in the twitter file is `r max(nchar(alltwitter))` characters.  

@@ -11,65 +11,65 @@ library("git2r",       lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.
 
 setwd("~/R/Capstone")
 
-load.data<-function(){
-  ### FILE INFO CALCUALTIONS
-  datasize <- function(file) {
-    
-    size <- object.size(file)
-    
-    nlines <- length(file)
-    
-    nwords <- sum(stri_count_words(file))
-    
-    data.frame ( as.numeric(size/2^10), nlines, nwords )
-    
-    
-  }
-  setwd("~/R/Capstone")
-  if (!exists("allblogs")) {
-    allblogs<<- iconv(readLines("Initial Dataset/final/en_US/en_US.blogs.txt",
-                                n       = -1,
-                                skipNul = TRUE, 
-                                warn    = FALSE,
-                                encoding= "UTF-8"))
-    print("Blog data loaded")
-    # print(unlist(datasize(allblogs))) 
-  }
-  
-  
-  if (!exists("allnews")) { 
-    allnews<<- iconv(readLines("Initial Dataset/final/en_US/en_US.news.txt", 
-                               n       = -1,
-                               skipNul = TRUE, 
-                               warn    = FALSE ,
-                               encoding= "UTF-8"))
-    print("News data loaded")
-    # print(unlist(datasize(allnews))) 
-  }
-  
-  
-  if (!exists("alltwitter")) {
-    alltwitter<<- iconv(readLines("Initial Dataset/final/en_US/en_US.twitter.txt",
-                                  n       = -1,
-                                  skipNul = TRUE, 
-                                  warn    = FALSE,
-                                  encoding= "UTF-8"))
-    
-    print("Twitter data loaded")
-    # print(unlist(datasize(alltwitter)))
-  }
-  
-  #raw.file.info<<-cbind(c("en_US.blogs.txt","en_US.news.txt","en_US.twitter.txt"), rbind( datasize(allblogs),datasize(allnews),datasize(alltwitter)))
-  
-  
-  
-}
+
 ## Generate n samples of size% of the entire dataset
 corpSample<-function(n,size)  {
 
   
   # Checks to see if original source files are loaded and loads them if required
-  
+  load.data<-function(){
+    ### FILE INFO CALCUALTIONS
+    datasize <- function(file) {
+      
+      size <- object.size(file)
+      
+      nlines <- length(file)
+      
+      nwords <- sum(stri_count_words(file))
+      
+      data.frame ( as.numeric(size/2^10), nlines, nwords )
+      
+      
+    }
+    setwd("~/R/Capstone")
+    if (!exists("allblogs")) {
+      allblogs<<- iconv(readLines("Initial Dataset/final/en_US/en_US.blogs.txt",
+                                  n       = -1,
+                                  skipNul = TRUE, 
+                                  warn    = FALSE,
+                                  encoding= "UTF-8"))
+      print("Blog data loaded")
+      # print(unlist(datasize(allblogs))) 
+    }
+    
+    
+    if (!exists("allnews")) { 
+      allnews<<- iconv(readLines("Initial Dataset/final/en_US/en_US.news.txt", 
+                                 n       = -1,
+                                 skipNul = TRUE, 
+                                 warn    = FALSE ,
+                                 encoding= "UTF-8"))
+      print("News data loaded")
+      # print(unlist(datasize(allnews))) 
+    }
+    
+    
+    if (!exists("alltwitter")) {
+      alltwitter<<- iconv(readLines("Initial Dataset/final/en_US/en_US.twitter.txt",
+                                    n       = -1,
+                                    skipNul = TRUE, 
+                                    warn    = FALSE,
+                                    encoding= "UTF-8"))
+      
+      print("Twitter data loaded")
+      # print(unlist(datasize(alltwitter)))
+    }
+    
+    #raw.file.info<<-cbind(c("en_US.blogs.txt","en_US.news.txt","en_US.twitter.txt"), rbind( datasize(allblogs),datasize(allnews),datasize(alltwitter)))
+    
+    
+    
+  }
  
    
   # Cleans the data stream to clean the data streams.  Intitially we wil remove 
@@ -109,7 +109,7 @@ corpSample<-function(n,size)  {
     profanity<-paste0("\\b",paste0(readLines(conf),collapse = "\\b|\\b"),"\\b")
     #profanity<-readLines(conf)
     close(conf)
-    x<-tm_map(x,tagwords, pattern = profanity,replacement = " <P> ", ignore.case = TRUE)
+    x<-tm_map(x,tagwords, profanity,replacement = " <P> ")
     # x<-tm_map(x,removeWords,profanity)
     writeLines("\nReplace profanity with a <p> tag\n", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
