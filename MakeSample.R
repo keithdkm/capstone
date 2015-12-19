@@ -106,7 +106,7 @@ corpSample<-function(n,size)  {
     
     # Tag any words appearing on Google's list of profane words  
     conf<-file("~/R/Capstone/Required Data/dirty.txt",'r')
-    profanity<-paste0("\\b",paste0(readLines(conf),collapse = "\\b|\\b"),"\\b")
+    profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")
     #profanity<-readLines(conf)
     close(conf)
     x<-tm_map(x,tagwords, profanity,replacement = " <P> ")
@@ -115,14 +115,24 @@ corpSample<-function(n,size)  {
     writeLines(substring(x[[1]]$content,1,4000),con)
     
 
-# 
-    
+# #   remove telephone numbers
+#     x<-tm_map(x, replacechars, '+?0-9{1,4}?[-. ]?(?0-9{1,3}?)?[-. ]?0-9{1,4}[-. ]?0-9{1,4}[-. ]?0-9{1,9}/g',  "<TEL>" )  
+#     writeLines("\nTag tel numbers", con)
+#     writeLines(substring(x[[1]]$content,1,4000),con)
+#    
+#     
    
     #remove stopwords
     if (stopw) {
       x<-tm_map(x, removeWords, stopwords("en"))
       writeLines("\nRemove stop words\n", con)
       writeLines(substring(x[[1]]$content,1,4000),con)}
+    
+    #replace numbers with <N> tags
+    x<-tm_map(x, replacechars, '(((0-9{1,3})(,0-9{3})*)|(0-9+))(.0-9+)?',   "<N>" )  
+    writeLines("\nTag numbers", con)
+    writeLines(substring(x[[1]]$content,1,4000),con)
+    
     
     #replace all sentence ending chars with newline
     x<-tm_map(x, replacechars, '[.?!]+ ',              " <e>\n<s> ") 
