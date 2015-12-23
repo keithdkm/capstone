@@ -70,10 +70,6 @@ load.data<-function(){
 ## Generate n samples of size% of the entire dataset
 corpSample<-function(n,size)  {
 
-  
-
- 
-   
   # Cleans the data stream to clean the data streams.  Intitially we wil remove 
   # Remove any whitespace beyond a single space between words 
   clean<-function(x,stopw){
@@ -96,7 +92,7 @@ corpSample<-function(n,size)  {
                                                                    x))
 
     #replace <> so that I can use the <> characters for tagging
-    x<-tm_map(x, replacechars, '[<>]+', ".") 
+    x<-tm_map(x, replacechars, '-[<>]+', " ") 
     writeLines("\nRemove other <> characters\n", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
@@ -113,7 +109,7 @@ corpSample<-function(n,size)  {
     close(conf)
     x<-tm_map(x,tagwords, profanity,replacement = " <P> ")
     # x<-tm_map(x,removeWords,profanity)
-    writeLines("\nReplace profanity with a <p> tag\n", con)
+    writeLines("\nReplace profanity with a <P> tag\n", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
 
@@ -131,19 +127,19 @@ corpSample<-function(n,size)  {
       writeLines(substring(x[[1]]$content,1,4000),con)}
     
     #replace numbers with <N> tags
-    x<-tm_map(x, replacechars, '(((0-9{1,3})(,0-9{3})*)|(0-9+))(.0-9+)?',   "<N>" )  
+    x<-tm_map(x, replacechars, '((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   "<N>" )  
     writeLines("\nTag numbers", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
     
     #replace all sentence ending chars with newline
     x<-tm_map(x, replacechars, '[.?!]+ ',              " <e>\n<s> ") 
-    writeLines("\nReplace sentence endings with newlines\n", con)
+    writeLines("\nReplace sentence start and end\n", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
     #remove apostrohes from contractions 
     x<-tm_map(x, replacechars, '[\'\`]',      "" )  
-    writeLines("\nRemove apostrohes", con)
+    writeLines("\nRemove apostrophes", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
     #   x<-tm_map(x, replacechars, '[@][a-zA-Z]+',"\n")  #remove twitter names
@@ -408,8 +404,6 @@ perplexity <-function(y) {
   sum(unlist(c$sent.prob))/sum(unlist(c$M))
   
   }
-
-
 
 
 main<-function(resamp,num.sample, sz.sample, ng.size) {
