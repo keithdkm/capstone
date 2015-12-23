@@ -7,7 +7,7 @@ library("RWeka",      lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1
 library("data.table", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("stringi",    lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("plyr",       lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("git2r",       lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("git2r",      lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 
 setwd("~/R/Capstone")
 
@@ -74,7 +74,7 @@ corpSample<-function(n,size)  {
   # Remove any whitespace beyond a single space between words 
   clean<-function(x,stopw){
     
- 
+  #General tagging function that accepts a corpus to search, a pattern to replace with the replacement  
     tagwords<-content_transformer(function(x,pattern, replacement) {gsub(pattern,
                                                                          replacement,
                                                                          x, 
@@ -92,7 +92,7 @@ corpSample<-function(n,size)  {
                                                                    x))
 
     #replace <> so that I can use the <> characters for tagging
-    x<-tm_map(x, replacechars, '-[<>]+', " ") 
+    x<-tm_map(x, replacechars, '[<>]+', " ") 
     writeLines("\nRemove other <> characters\n", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
@@ -104,8 +104,7 @@ corpSample<-function(n,size)  {
     
     # Tag any words appearing on Google's list of profane words  
     conf<-file("~/R/Capstone/Required Data/dirty.txt",'r')
-    profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")
-    #profanity<-readLines(conf)
+    profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")    #profanity<-readLines(conf)
     close(conf)
     x<-tm_map(x,tagwords, profanity,replacement = " <P> ")
     # x<-tm_map(x,removeWords,profanity)
@@ -128,35 +127,40 @@ corpSample<-function(n,size)  {
     
     #replace numbers with <N> tags
     x<-tm_map(x, replacechars, '((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   "<N>" )  
-    writeLines("\nTag numbers", con)
+    writeLines("\nTag Number with <N>", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
+    #replace all apostrophes with space '
+    x<-tm_map(x, replacechars, '\'',              " \'") 
+    writeLines("\nReplace apostrophes with space apostrophes so that tokenizer treats contractions as two words", con)
+    writeLines(substring(x[[1]]$content,1,4000),con)
     
-    #replace all sentence ending chars with newline
+        
+    #replace all sentence ending chars with sentence end tag ,newline and sentence start tag
     x<-tm_map(x, replacechars, '[.?!]+ ',              " <e>\n<s> ") 
     writeLines("\nReplace sentence start and end\n", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
     #remove apostrohes from contractions 
-    x<-tm_map(x, replacechars, '[\'\`]',      "" )  
-    writeLines("\nRemove apostrophes", con)
-    writeLines(substring(x[[1]]$content,1,4000),con)
+#     x<-tm_map(x, replacechars, '[\'\`]',      "" )  
+#     writeLines("\nRemove apostrophes", con)
+#     writeLines(substring(x[[1]]$content,1,4000),con)
     
     #   x<-tm_map(x, replacechars, '[@][a-zA-Z]+',"\n")  #remove twitter names
     #   x<-tm_map(x, replacechars, '[#][a-zA-Z]+',"\n")  #remove twitter hashtags
     
-    #All other stop characters and numerics replace with a period to force tokenizer 
-    x<-tm_map(x, replacechars, '[0-9()\"“”\':;,]', ".") 
+    #All other stop characters and numerics replace with a blank  
+    x<-tm_map(x, replacechars, '[0-9()\"“”:;,_-]', " ") 
     writeLines("\nRemove other stop characters\n", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
     #remove all other unknown chars 
-    x<-tm_map(x, replacechars, '[^a-zA-Z. \n<>-]',         "")  
+    x<-tm_map(x, replacechars, '[^a-zA-Z. \n<>\']',         "")  
     writeLines("\nRemove other unknown characters\n", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
     #Remove single letters that are not valid single letters 
-    x<-tm_map(x, replacechars, '[ ][^AaIi\n][ ]',       ".") 
+    x<-tm_map(x, replacechars, '[ ][^AaIi\n][ ]',       "") 
     writeLines("\nRemove invalid single characters\n", con)
     writeLines(substring(x[[1]]$content,1,4000),con)
     
