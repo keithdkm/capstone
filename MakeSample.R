@@ -302,7 +302,10 @@ make.ngrams<-function(min.ng,max.ng,n,size){
     
   }
 
-  ngramfreq[, numwords := stri_count_words(ngram) ]
+  
+  setkey(ngramfreq,ngram)
+  ## Rolls up ngram counts into totals by ngram
+ test<- ngramfreq[, .(count = sum(count)), by = .(ngram)][, numwords := stri_count_words(ngram) ]
 
   setkey(ngramfreq,numwords,ngram)
   
