@@ -1,12 +1,12 @@
 ##Required libraries
-
-
-library("tm",         lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("caret", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("e1071", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("tm",    lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 options( java.parameters = "-Xmx4g" )
-library("RWeka",      lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("data.table", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("stringi",    lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("plyr",       lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("stringi", lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("plyr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("git2r",      lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 
 setwd("~/R/Capstone")
@@ -34,8 +34,10 @@ load.data<-function(){
                                 warn    = FALSE,
                                 encoding= "UTF-8"))
     print("Blog data loaded")
-    # print(unlist(datasize(allblogs))) 
+    
   }
+    print(unlist(datasize(allblogs))) 
+  
   
   
   if (!exists("allnews")) { 
@@ -60,7 +62,8 @@ load.data<-function(){
     # print(unlist(datasize(alltwitter)))
   }
   
-  #raw.file.info<<-cbind(c("en_US.blogs.txt","en_US.news.txt","en_US.twitter.txt"), rbind( datasize(allblogs),datasize(allnews),datasize(alltwitter)))
+  return(cbind(c("en_US.blogs.txt","en_US.news.txt","en_US.twitter.txt"), 
+               rbind( datasize(allblogs),datasize(allnews),datasize(alltwitter))))
   
   
   
@@ -85,7 +88,7 @@ corpSample<-function(n,size)  {
     
     con<-file("~/R/Capstone/Results/clean_text.txt","wt")
     writeLines("\nRAW TEXT", con)
-    writeLines(substring(x[[1]]$content,1,4000),con)
+    writeLines(substring(x[[1]]$content,1,12000),con)
  
     replacechars<-content_transformer(function(x,pattern,new) gsub(pattern, 
                                                                    new, 
@@ -94,7 +97,7 @@ corpSample<-function(n,size)  {
     #replace <> so that I can use the <> characters for tagging
     x<-tm_map(x, replacechars, '[<>]+', " ") 
     writeLines("\nRemove other <> characters\n", con)
-    writeLines(substring(x[[1]]$content,1,4000),con)
+    writeLines(substring(x[[1]]$content,1,12000),con)
     
     
     
@@ -109,13 +112,13 @@ corpSample<-function(n,size)  {
     x<-tm_map(x,tagwords, profanity,replacement = " <P> ")
     # x<-tm_map(x,removeWords,profanity)
     writeLines("\nReplace profanity with a <P> tag\n", con)
-    writeLines(substring(x[[1]]$content,1,4000),con)
+    writeLines(substring(x[[1]]$content,1,12000),con)
     
 
 # #   remove telephone numbers
 #     x<-tm_map(x, replacechars, '+?0-9{1,4}?[-. ]?(?0-9{1,3}?)?[-. ]?0-9{1,4}[-. ]?0-9{1,4}[-. ]?0-9{1,9}/g',  "<TEL>" )  
 #     writeLines("\nTag tel numbers", con)
-#     writeLines(substring(x[[1]]$content,1,4000),con)
+#     writeLines(substring(x[[1]]$content,1,12000),con)
 #    
 #     
    
@@ -123,28 +126,28 @@ corpSample<-function(n,size)  {
     if (stopw) {
       x<-tm_map(x, removeWords, stopwords("en"))
       writeLines("\nRemove stop words\n", con)
-      writeLines(substring(x[[1]]$content,1,4000),con)}
+      writeLines(substring(x[[1]]$content,1,12000),con)}
     
     #replace numbers with <N> tags
     x<-tm_map(x, replacechars, '((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   "<N>" )  
     writeLines("\nTag Number with <N>", con)
-    writeLines(substring(x[[1]]$content,1,4000),con)
+    writeLines(substring(x[[1]]$content,1,12000),con)
     
     #replace all apostrophes with space '
     x<-tm_map(x, replacechars, '\'',              " \'") 
     writeLines("\nReplace apostrophes with space apostrophes so that tokenizer treats contractions as two words", con)
-    writeLines(substring(x[[1]]$content,1,4000),con)
+    writeLines(substring(x[[1]]$content,1,12000),con)
     
         
     #replace all sentence ending chars with sentence end tag ,newline and sentence start tag
     x<-tm_map(x, replacechars, '[.?!]+ ',              " <e>\n<s> ") 
     writeLines("\nReplace sentence start and end\n", con)
-    writeLines(substring(x[[1]]$content,1,4000),con)
+    writeLines(substring(x[[1]]$content,1,12000),con)
     
     #remove apostrohes from contractions 
 #     x<-tm_map(x, replacechars, '[\'\`]',      "" )  
 #     writeLines("\nRemove apostrophes", con)
-#     writeLines(substring(x[[1]]$content,1,4000),con)
+#     writeLines(substring(x[[1]]$content,1,12000),con)
     
     #   x<-tm_map(x, replacechars, '[@][a-zA-Z]+',"\n")  #remove twitter names
     #   x<-tm_map(x, replacechars, '[#][a-zA-Z]+',"\n")  #remove twitter hashtags
@@ -152,22 +155,22 @@ corpSample<-function(n,size)  {
     #All other stop characters and numerics replace with a blank  
     x<-tm_map(x, replacechars, '[0-9()\"“”:;,_-]', " ") 
     writeLines("\nRemove other stop characters\n", con)
-    writeLines(substring(x[[1]]$content,1,4000),con)
+    writeLines(substring(x[[1]]$content,1,12000),con)
     
     #remove all other unknown chars 
     x<-tm_map(x, replacechars, '[^a-zA-Z. \n<>\']',         "")  
     writeLines("\nRemove other unknown characters\n", con)
-    writeLines(substring(x[[1]]$content,1,4000),con)
+    writeLines(substring(x[[1]]$content,1,12000),con)
     
     #Remove single letters that are not valid single letters 
     x<-tm_map(x, replacechars, '[ ][^AaIi\n][ ]',       "") 
     writeLines("\nRemove invalid single characters\n", con)
-    writeLines(substring(x[[1]]$content,1,4000),con)
+    writeLines(substring(x[[1]]$content,1,12000),con)
     
     #remove extra whitespace 
     x<-tm_map(x, replacechars, '[ ][ ]+', " ") 
     writeLines("\nRemove additional whitespace characters\n", con)
-    writeLines(substring(x[[1]]$content,1,4000),con)
+    writeLines(substring(x[[1]]$content,1,12000),con)
     close(con)
     return(x)
     
@@ -266,7 +269,7 @@ make.ngrams<-function(min.ng,max.ng,n,size){
     
     tdm<-as.matrix(tdm)
     
-    word.freq <- data.table(wordi = row.names(tdm), count = tdm[,1], sample = i) 
+    word.freq <- data.table(wordi = row.names(tdm), count = tdm[,1]) 
 
     word.freq
   }
@@ -339,6 +342,8 @@ make.ngrams<-function(min.ng,max.ng,n,size){
                     ngram.time<<-timetaken(started.at)
   
   cat("Finished ",n,"samples in ",timetaken(started.at),"\n") 
+  
+  return(ngramfreq)
   
     }
  
