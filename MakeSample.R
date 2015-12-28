@@ -269,7 +269,7 @@ make.ngrams<-function(min.ng,max.ng,n,size){
     
     tdm<-as.matrix(tdm)
     
-    word.freq <- data.table(wordi = row.names(tdm), count = tdm[,1]) 
+    word.freq <- data.table(ngram = row.names(tdm), count = tdm[,1]) 
 
     word.freq
   }
@@ -302,19 +302,19 @@ make.ngrams<-function(min.ng,max.ng,n,size){
     
   }
 
-  ngramfreq[, numwords := stri_count_words(wordi) ]
+  ngramfreq[, numwords := stri_count_words(ngram) ]
 
-  setkey(ngramfreq,numwords,wordi)
+  setkey(ngramfreq,numwords,ngram)
   
   # UNIGRAMS
   
-  if (max.ng>0) unigrams<<- ngramfreq[.(1), .(count = sum(count)) , by = .(wordi)][,probability := -log2(count/sum(count))]
+  if (max.ng>0) unigrams<<- ngramfreq[.(1), .(count = sum(count)) , by = .(ngram)][,probability := -log2(count/sum(count))]
   
-                setkey(unigrams,wordi)
+                setkey(unigrams,ngram)
   
   #BIGRAMS
   
-  if (max.ng>1) {bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(wordi)][, c("W1", "W2") := tstrsplit(wordi, " ", fixed = TRUE)]
+  if (max.ng>1) {bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(ngram)][, c("W1", "W2") := tstrsplit(ngram, " ", fixed = TRUE)]
   
                   setkey(bigrams,W1)
                   
@@ -322,7 +322,7 @@ make.ngrams<-function(min.ng,max.ng,n,size){
     
   #TRIGRAMS
   
-  if (max.ng > 2) {trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2:=paste0(W1," ",W2)]
+  if (max.ng > 2) {trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngram)][, c("W1", "W2","W3") := tstrsplit(ngram, " ", fixed = TRUE)][,W1W2:=paste0(W1," ",W2)]
   
                     setkey(trigrams,W1W2)
                     
@@ -331,7 +331,7 @@ make.ngrams<-function(min.ng,max.ng,n,size){
 
   #QUADRIGRAMS
                 
-  if (max.ng > 3) {quadrigrams <<- ngramfreq[.(4), .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3","W4") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2W3:=paste0(W1," ",W2," ",W3)]
+  if (max.ng > 3) {quadrigrams <<- ngramfreq[.(4), .(count = sum(count)) , by = .(ngram)][, c("W1", "W2","W3","W4") := tstrsplit(ngram, " ", fixed = TRUE)][,W1W2W3:=paste0(W1," ",W2," ",W3)]
   
                     setkey(quadrigrams,W1W2W3)
                     
@@ -358,22 +358,22 @@ phrase <-  function(x) {
         phrase.length <- stri_count_words(x) 
         
         if (phrase.length == 3) 
-          phrase<-quadrigrams[x, .(wordi,pw4_w3w2w1)][order(pw4_w3w2w1)[1:3], wordi]
+          phrase<-quadrigrams[x, .(ngram,pw4_w3w2w1)][order(pw4_w3w2w1)[1:3], ngram]
         
         if (is.na(phrase[1])) {phrase <- paste(stri_extract_all_words(x)[[1]][2:3], collapse = " ") ; phrase.length<-phrase.length-1; print("Backing off to trigrams")}
         
         if ( phrase.length  == 2) 
-          phrase<-trigrams[x , .(wordi,pw3_w2w1)][order(pw3_w2w1)[1:3], wordi]
+          phrase<-trigrams[x , .(ngram,pw3_w2w1)][order(pw3_w2w1)[1:3], ngram]
 
         if (is.na(phrase[1])) {phrase <- paste(stri_extract_all_words(x)[[1]][2], collapse = " ") ; phrase.length<-phrase.length-1; print("Backing off to bigrams")}
         
         if ( phrase.length  == 1) 
-         phrase<-bigrams[x, .(wordi,pw2_w1)][order(pw2_w1)[1:3],wordi]
+         phrase<-bigrams[x, .(ngram,pw2_w1)][order(pw2_w1)[1:3],ngram]
        
         if (is.na(phrase[1])) { phrase.length<-phrase.length-1; print("Backing off to unigrams")}
         
         if (phrase.length == 0)
-         phrase<-unigrams[order(probability),wordi ][1:3]
+         phrase<-unigrams[order(probability),ngram ][1:3]
 
    
    phrase}
@@ -481,7 +481,7 @@ main<-function(resamp,num.sample, sz.sample, ng.size) {
 
 
   #
-  # bigrams<-ngramfreq[, totalcount := sum(count) , by = .(wordi)][, numwords := stri_count_words(wordi), ][,pwiw1 := log10(totalcount)-log10(unigrams[stri_extract_first_words(ngramfreq$wordi),count])]
+  # bigrams<-ngramfreq[, totalcount := sum(count) , by = .(ngram)][, numwords := stri_count_words(ngram), ][,pwiw1 := log10(totalcount)-log10(unigrams[stri_extract_first_words(ngramfreq$ngram),count])]
   
 #   a_spl <- function(dt) {
 #     ll <- unlist(strsplit(dt$PREFIX, "_", fixed=TRUE))
@@ -518,27 +518,27 @@ main<-function(resamp,num.sample, sz.sample, ng.size) {
 #   identical(a1, a3) # TRUE
 
 
-#   ngramfreq[, numwords := stri_count_words(wordi) ]
+#   ngramfreq[, numwords := stri_count_words(ngram) ]
 # 
-#   setkey(ngramfreq,numwords,wordi)
+#   setkey(ngramfreq,numwords,ngram)
 #   
-#   unigrams<- ngramfreq[numwords == 1, .(count = sum(count)) , by = .(wordi)][,probability := log10(count/sum(count))]
+#   unigrams<- ngramfreq[numwords == 1, .(count = sum(count)) , by = .(ngram)][,probability := log10(count/sum(count))]
 #   
-#   setkey(unigrams,wordi)
+#   setkey(unigrams,ngram)
 #   
-#   bigrams <- ngramfreq[numwords == 2, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2") := tstrsplit(wordi, " ", fixed = TRUE)]
+#   bigrams <- ngramfreq[numwords == 2, .(count = sum(count)) , by = .(ngram)][, c("W1", "W2") := tstrsplit(ngram, " ", fixed = TRUE)]
 #   
-#   setkey(bigrams,wordi)
+#   setkey(bigrams,ngram)
 #   
-#   # bigrams[,pw2_w1 := log10(count/unigrams[stri_extract_first_words(bigrams$wordi),count])]
+#   # bigrams[,pw2_w1 := log10(count/unigrams[stri_extract_first_words(bigrams$ngram),count])]
 #   
 #   bigrams[,pw2_w1 := log10(count/unigrams[bigrams$W1,count])]
 #   
-#   trigrams <- ngramfreq[numwords == 3, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2:=paste0(W1," ",W2)]
+#   trigrams <- ngramfreq[numwords == 3, .(count = sum(count)) , by = .(ngram)][, c("W1", "W2","W3") := tstrsplit(ngram, " ", fixed = TRUE)][,W1W2:=paste0(W1," ",W2)]
 #   
 #   setkey(trigrams,W1W2)
 #   
 #   trigrams[, pw3_w2w1 := log10(count/ bigrams[trigrams$W1W2, count])]
 #   
-# quadgrams <- ngramfreq[numwords == 4, .(count = sum(count)) , by = .(wordi)][, c("W1", "W2","W3","W4") := tstrsplit(wordi, " ", fixed = TRUE)][,W1W2W3:=paste0(W1," ",W2," ",W3)]
+# quadgrams <- ngramfreq[numwords == 4, .(count = sum(count)) , by = .(ngram)][, c("W1", "W2","W3","W4") := tstrsplit(ngram, " ", fixed = TRUE)][,W1W2W3:=paste0(W1," ",W2," ",W3)]
 
