@@ -22,7 +22,7 @@ load.data<-function(){
     
     nwords <- sum(stri_count_words(file))
     
-    data.frame ( as.numeric(size/2^10), nlines, nwords )
+    data.frame ( File.Size = as.numeric(size/2^10), Lines = nlines, Words = nwords )
     
     
   }
@@ -36,7 +36,7 @@ load.data<-function(){
     print("Blog data loaded")
     
   }
-    print(unlist(datasize(allblogs))) 
+   ## print(unlist(datasize(allblogs))) 
   
   
   
@@ -62,7 +62,7 @@ load.data<-function(){
     # print(unlist(datasize(alltwitter)))
   }
   
-  return(cbind(c("en_US.blogs.txt","en_US.news.txt","en_US.twitter.txt"), 
+  return(cbind(File.Name = c("en_US.blogs.txt","en_US.news.txt","en_US.twitter.txt"), 
                rbind( datasize(allblogs),datasize(allnews),datasize(alltwitter))))
   
   
@@ -305,7 +305,7 @@ make.ngrams<-function(min.ng,max.ng,n,size){
   
   setkey(ngramfreq,ngram)
   ## Rolls up ngram counts into totals by ngram
- test<- ngramfreq[, .(count = sum(count)), by = .(ngram)][, numwords := stri_count_words(ngram) ]
+ngramfreq<-unique(ngramfreq[, count := sum(count),by = ngram][, numwords := stri_count_words(ngram) ])
 
   setkey(ngramfreq,numwords,ngram)
   
