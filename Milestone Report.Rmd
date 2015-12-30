@@ -8,7 +8,7 @@ output: html_document
 
 ##Executive Summary
 
-This is a milestone report covering progress to date on the design and build of a web-based English language text prediction application based upon the Shiny development platform. In the early stages of the project three large samples of data from blogs, news reports and twitter were downloaded.  The samples were reviewed and tools and strategies developed for cleaning the data, sampling the data, tokenizing the data and summarizing the data for use in am ngram based model.  Using the R language's extensive library of functions, code was written to complete these steps.  After experimentation, it was dtermined that a 25% sample of the source data provided a reasonable balance between results accuracy and computing resources for the initial model building. Analyzing the unigrams, i.e.single words, it was determined that a dictionary of only 249 words covers 50% of the words appearing and a dictionary of 9056 words covers 90% of the words appearing in the corpus of source texts.  
+This is a milestone report covering progress to date on the design and build of a web-based English language text prediction application based upon the Shiny development platform. In the early stages of the project three large samples of data from blogs, news reports and twitter were downloaded.  The samples were reviewed and tools and strategies developed for cleaning the data, sampling the data, tokenizing the data and summarizing the data for use in am ngram based model.  Using the R language's extensive library of functions, code was written to complete these steps.  After experimentation, it was determined that a 25% sample of the source data provided a reasonable balance between results accuracy and computing resources for the initial model building. Analyzing the unigrams, i.e.single words, it was determined that a vocabulary of only 107 words covers 50% of the words appearing and a vocabulary of 6545 words covers 90% of the words appearing in the corpus of source texts.  
 
 
 ##Data Acquisition and Cleaning
@@ -52,36 +52,35 @@ kable(a,col.names = c("File Name", "File Size Mb","Line Count","Word Count"), ca
 
 The dataset is large relatively large given that our goal is to build a word and phrase based prediction algorithm.  It was decided to work with a small sample. It was also noted that the blog and twitter files contain ten times as many words as the news file.  Given the very different use of language in twitter and blog posts, this was noted as a possible source of skewing in the data.  However the algorithm we are aiming to develop is for general use.
 
-After some experimentation with performance, it was decided that a 25% sample of the data was practical.  The approach was to download the entire dataset into R and then generate many small random samples of the line numbers for each source and load those lines into a corpus data structure.  Each of the generated corpuses has lines of text from all three sources.   
-
+After some experimentation with performance, it was decided that a 25% sample of the data was practical.  The approach was to download the entire dataset into R and then generate many small random samples of the line numbers for each source and load those lines into a corpus data structure and generating a term-document matrix (TDM).  The TDMs were then combined using *data.table* to produce counts and probabilities.    Each of the generated corpuses has lines of text from all three sources.   Total ngram generation processing time for a 25% sample is about 75 minutes.  A 25% test sample was also cleaned during this process.
+ 
 ###Tools
 
-R provides many useful libraries for text mining.  This project uses the tm, RWeka, stringi and data.table packages. *tm* provides the term-document matrix structure used for counting word frequencies, RWeka the tokenization code, stringi for better text handling and data.table for fast data lookup and sorting on large tables. 
+R provides many useful libraries for text mining.  This project uses the *tm, RWeka, stringi* and *data.table* packages. *tm* provides the term-document matrix structure used for counting word frequencies, *RWeka* the tokenization code, *stringi* for better text handling and *data.table* for fast data lookup and sorting on large tables. 
 
 ###Data Cleaning
  
-The following steps were performed to clean the sample
+The following steps were performed to clean the sample.  It is expected that this appraoch will be tweaked and changed during the model building.
 
 1. Standardize to UTF-8 and remove all unrecognized characters
-1. Replace profane words with the <P> tag
+1. Replace profane words with the "\<P>" tag
 1. Convert to chars lower case
 1. Replace all sentence ending chars with a "\<e>" token
-1. Insert a sentence start token "\<s> at the start of each sentence 
+1. Insert a sentence start token "\<s>"" at the start of each sentence 
 1. Separate contractions with an apostrophe into two tokens
 1. Replace numbers with an "\<N>" token
-1. All other stop characters and numerics replace with a ?blank?
+1. All other stop characters and numerics replace with a blank character
 1. Remove all other unknown characters 
 1. Remove single letters that are not valid single letters 
 1. remove extra whitespace 
   
 ####Contractions  
-Contractions such as a "I'm", "it's" and "he'd" are initially going to be treated as two words for the sake of tokenization.  So for example "I'm" will appear in the bigram list.  This is being done because the contraction is often the most likely prediction.  In the case of ngram "<s> I", the prediction "'m" is approximately twice as likely as the prediction "am".  
+Contractions such as a "I'm", "it's" and "he'd" are initially going to be treated as two words for the sake of tokenization.  So for example "I'm" will appear in the bigram list as "I 'm".  This is being done because the contraction is often the most likely prediction.  In the case of ngram "\<s> I", the prediction "'m" is approximately twice as likely as the prediction "am". More work has to be done to decide if this is the correct approach for contractions.  The simplest alternative is to ignore the contractions by removing apostrophes and use the resulting vocabulary words in the model, adding the apostrophe back at prediction time.   Another and better approach is to replace the contractions with their expansions and feed those results into the model.  This has the advantage that it boosts the ngram counts of the expanded words, making the resulting predictions more accurate.  However, not all contractions can be expanded like this without taking context into account e.g. does "'s"  denote possession or is it a contraction of "is"?  Some hybrid approach is probably best. 
+
 ###Tokenization
 
-Having cleaned the data, the sample was tokenized, meaning that it was divided up into one, two and three word phrases called ngrams. At present profanity, numbers and sentence starting and ending are tagged.  This was done for two seperate reasons.  Both profanity and numbers are present in the corpus with sufficient frequency that just to replace them with spaces loses useful contextual information and may create a large number of useless ngrams e.g. the car cost .. dollars.  The algorithm should be able to predict "dollars" after a number.  Hence the clean up code tags the number as "<N>" giving us "the car cost <N> dollars".  Now we have a useful ngram i.e. "cost <N> " that could feasibly predict "dollars" as the next word.  In the case of sentence beginnings and endings, they also provide context for predictions.  All of the tagged items can be used as predictors be will not themselves be predicted.  This approach will also be used to tag unrecognized words in the next phase of the project for use as predictors.  For the sake of word probabilities, the <P> and <N> tags will probably be included, but the <s> and <e> tags will not.  
+Having cleaned the data, the sample was tokenized, meaning that it was divided up into one, two and three word tokens called ngrams. At present profanity, numbers and sentence starting and ending are tagged.  This was done for two seperate reasons.  Both profanity and numbers are present in the corpus with sufficient frequency that just to replace them with spaces loses useful contextual information and may create a large number of useless ngrams e.g. the car cost .. dollars.  The algorithm should be able to predict "dollars" after a number.  Hence the clean up code tags the number as "<N>" giving us "the car cost <N> dollars".  Now we have a useful ngram i.e. "cost <N> " that could feasibly predict "dollars" as the next word.  In the case of sentence beginnings and endings, they also provide context for predictions.  All of the tagged items can be used as predictors be will not themselves be predicted.  This approach will also be used to tag unrecognized words in the next phase of the project for use as predictors.  For the sake of word probabilities, the \<P> and <N> tags will probably be included, but the \<s> and <e> tags will not.  
   
-
-
 
 ##Exploratory analysis
 
@@ -89,10 +88,10 @@ Ngrams and their relative frequencies will form the basis of our prediction algo
 
 In the sample, the following numbers of ngrams were counted
 
-```{r Read in the ngram freq table, echo = FALSE, cache=TRUE}
+```{r Read in the ngram freq table, echo = FALSE, cache=FALSE}
 
 final<-readRDS("Results/Interim.RDS")
-setkey(final, wordcount, count)
+setkey(final, wordcount)
 kable(data.frame(c("Unigram","Bigram","Trigram"),
                  c(final[.(1),.N], 
                    final[.(2),.N], 
@@ -101,56 +100,62 @@ kable(data.frame(c("Unigram","Bigram","Trigram"),
 
 ```
 
-Here are samples from the top, middle and bottom of the unigram,2gram and 3gram list sorted by probability.: 
+Here are samples from the top, middle and bottom of the unigram,bigram and trigram lists for ngrams with count > 1 sorted by probability.: 
 ```{r, echo= FALSE}
-final<-final[-grep("<[se]>",final[,ngram],value = FALSE),]
-kable(data.frame(ngram = c("Unigram","Bigram","Trigram"), 
-              Top = c(paste(final[.(1), ][order(-count)][1:10,ngram],collapse=","), 
-                      paste(final[.(2), ][order(-count)][1:10,ngram],collapse=","),
-                      paste(final[.(3), ][order(-count)][1:10,ngram],collapse=",")), 
-          Middle  = c(paste(final[.(1), ][order(-count)][(final[.(1),.N]/2)+ -5:5,ngram],collapse=","), 
-                      paste(final[.(2), ][order(-count)][(final[.(2),.N]/2)+ -5:5,ngram],collapse=","),
-                      paste(final[.(3), ][order(-count)][(final[.(3),.N]/2)+ -5:5,ngram],collapse=",")), 
-              End = c(paste(final[.(1), ][order(-count)][(final[.(1),.N]) - 0:9, ngram],collapse=","),
-                      paste(final[.(2), ][order(-count)][(final[.(2),.N]) - 0:9, ngram],collapse=","),
-                      paste(final[.(3), ][order(-count)][(final[.(3),.N]) - 0:9, ngram],collapse=",")) ))
 
-final[.(1),Mean.Probability := count/final[.(1),.N] ] 
-final[.(2),Mean.Probability := count/final[.(2),.N] ]
-final[.(3),Mean.Probability := count/final[.(3),.N] ]
+#remove the ngrams that include <s> and <e> tags when considering ngram frequency
+final<-final[-grep("<[se]>",final[,ngram],value = FALSE),]
+
+#format the table
+kable(data.frame(ngram = c("Unigram","Bigram","Trigram"), 
+              Top = c(paste(final[.(1), ][count>1][order(-count)][1:10,ngram],collapse=","), 
+                      paste(final[.(2), ][count>1][order(-count)][1:10,ngram],collapse=","),
+                      paste(final[.(3), ][count>1][order(-count)][1:10,ngram],collapse=",")), 
+          Middle  = c(paste(final[.(1), ][count>1][order(-count)][(final[.(1)][count>1,.N]/2)+ -5:5,ngram],collapse=","), 
+                      paste(final[.(2), ][count>1][order(-count)][(final[.(2)][count>1,.N]/2)+ -2:2,ngram],collapse=","),
+                      paste(final[.(3), ][count>1][order(-count)][(final[.(3)][count>1,.N]/2)+ -2:2,ngram],collapse=",")), 
+              End = c(paste(final[.(1), ][count>1][order(-count)][(final[.(1)][count>1,.N]) - 0:3, ngram],collapse=","),
+                      paste(final[.(2), ][count>1][order(-count)][(final[.(2)][count>1,.N]) - 0:3, ngram],collapse=","),
+                      paste(final[.(3), ][count>1][order(-count)][(final[.(3)][count>1,.N]) - 0:3, ngram],collapse=",")) ))
+
+final[.(1),Mean.Probability := count/final[.(1),sum(count)] ] 
+final[.(2),Mean.Probability := count/final[.(2),sum(count)] ]
+final[.(3),Mean.Probability := count/final[.(3),sum(count)] ]
 ```
 
-
+It is notable that the middle of the unigram table contains many junk words whereas the middle and end of the bigram and trigram tables do have meaningful phrases.  
 
 A term document matrix was created for our sample set that generated a frequency for each ngram. 
 
-Plotting these frequencies for unigrams 
+By sorting the unigram list by probability and then plotting that probability against list position we get a graph that shows how big a vocabulary needs to be to have a specific probability that any specifi word from the test set will be found
 
 ```{r Graph Relative Frequencies, echo = F,results = 'hide',eval=TRUE}
 
- 
+setorder(final,wordcount,-count)
+
 final[,Cum.Probability:=cumsum(Mean.Probability),by = wordcount]
+
+setkey(final,wordcount)
 ```
-```{r,, echo = F, cache= TRUE,eval=TRUE}
-g<-ggplot(final[.(1),],aes(log10(1:final[.(1),.N]),Cum.Probability))+geom_line()+ggtitle("Cumulative Probability Density for unigrams by  Dictionary Size") + xlab("Log 10(Dictionary Size in Words)") + ylab("Cumulative Probability of Word Inclusion")
+```{r,, echo = F, cache= FALSE,eval=TRUE}
+g<-ggplot(final[.(1),],aes(log10(1:final[.(1),.N]),Cum.Probability))+geom_line()+ggtitle("Cumulative Probability Density for unigrams by  Vocabulary Size") + xlab("Log 10(Vocabulary Size in Words)") + ylab("Cumulative Probability of Word Inclusion")
 print(g)
 ```
 
-This graph show that a dictionary of `r final[wordcount==1 & Cum.Probability<0.5 ,.N]` words has a 50% chance of any a single word being in the dictionary and that a dictionary of `r final[wordcount==1 & Cum.Probability<0.9 ,.N]` words has 90% chance of being in the dictionary. Increasing dictionary size from 10000 words to 100,000 words only improves the chance of a word being in the dictionary by around 5 percentage points.  This graph suggests that a dictionary size that uses around 15,000 words will give `r round(100*final[wordcount==1 ,Cum.Probability][15000])` probability that a word will be found.  This will be the most efficient balance of size, speed and accuracy.  This finding will be used to select and limit the size of the list on ngrams that are used to for word prediction
+This graph show that a Vocabulary of `r final[wordcount==1 & Cum.Probability<0.5 ,.N]` words has a 50% chance of any a single word being in the vocabulary and that a vocabulary of `r final[wordcount==1 & Cum.Probability<0.9 ,.N]` words has 90% chance of being in the vocabulary. Increasing vocabulary size from 10,000 words to 100,000 words only improves the chance of a word being in the vocabulary by around 5 percentage points.  This graph suggests that a vocabulary size that uses the 15,000 words most likely words will give `r round(100*final[wordcount==1 ,Cum.Probability][15000])`% probability that a word will be found in this training set.  This will be the most efficient balance of size, speed and accuracy.  This finding will be used to select and limit the size of the list of ngrams that the model will predict and use for word prediction.  
 
 
-```{r, echo = F, cache =TRUE, eval=true}
-g<-ggplot(final[wordcount==2,],aes(log10(1:final[wordcount==2,.N]),Cum.Probability))+geom_line()+ggtitle("Cumulative Probability Density for bigrams by  Dictionary Size") + xlab("Log 10(Dictionary Size in Words)") + ylab("Cumulative Probability of Word Inclusion")
+Repeating 
+
+```{r, echo = F, cache =FALSE, eval=true}
+g<-ggplot(final[wordcount==2,],aes(log10(1:final[wordcount==2,.N]),Cum.Probability))+geom_line()+ggtitle("Cumulative Probability Density for bigrams by  Vocabulary Size") + xlab("Log 10(Vocabulary Size in Words)") + ylab("Cumulative Probability of Word Inclusion")
 print(g)
 ```
 
-This graph show that a dictionary of `r final[wordcount==2 & Cum.Probability<0.5 ,.N]` bigrams has a 50% chance of any a 2gram word being in the dictionary and that even a dictionary of `r final[wordcount==2 & Cum.Probability<0.9 ,.N]` bigrams only has 90% chance of including the 2gram.  
+This graph show that a vocabulary of `r final[wordcount==2 & Cum.Probability<0.5 ,.N]` bigrams has a 50% chance of any a bigram word being in the vocabulary and that even a vocabulary of `r final[wordcount==2 & Cum.Probability<0.9 ,.N]` bigrams only has 90% chance of including the bigram.  
 
-The results are similar with trigrams. With  `r format(final[.(3),.N],big.mark = ",", scientific = FALSE )` unique ngrams a dictionary with sufficient coverage is going to be too large.
+The results are similar with trigrams. With  `r format(final[wordcount==3,.N],big.mark = ",", scientific = FALSE )` unique ngrams a vocabulary with sufficient coverage is going to be too large.
 
 ##Conclusion
 
-Given these results for unigrams and bigrams, the intent is to use a set of ngrams that are limited to predicting the most likely 15,000 words from the unigram dictionary.  In order to predict less likely words an additional strategy will be required.  
-
-
-
+The text prediction tool will probably use a trigram model as its basis on a vocabulary of 15,000 words.  The strategies to handle unseen ngrams that are being considered are backoff and smoothing but it has yet to be decided which.  It is intended that the test sample generated in the data cleaning step will be used to assess the accuracy (perplexity) of the possible appraoches.  With respect to the Shiny app, the ideal application will offer a drop down box with three best predictions after the space bar is pressed.  
