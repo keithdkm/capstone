@@ -72,7 +72,7 @@ The following steps were performed to clean the sample.  It is expected that thi
 1. All other stop characters and numerics replace with a blank character
 1. Remove all other unknown characters 
 1. Remove single letters that are not valid single letters 
-1. remove extra whitespace 
+1. Remove extra whitespace 
   
 ####Contractions  
 Contractions such as a "I'm", "it's" and "he'd" are initially going to be treated as two words for the sake of tokenization.  So for example "I'm" will appear in the bigram list as "I 'm".  This is being done because the contraction is often the most likely prediction.  In the case of ngram "\<s> I", the prediction "'m" is approximately twice as likely as the prediction "am". More work has to be done to decide if this is the correct approach for contractions.  The simplest alternative is to ignore the contractions by removing apostrophes and use the resulting vocabulary words in the model, adding the apostrophe back at prediction time.   Another and better approach is to replace the contractions with their expansions and feed those results into the model.  This has the advantage that it boosts the ngram counts of the expanded words, making the resulting predictions more accurate.  However, not all contractions can be expanded like this without taking context into account e.g. does "'s"  denote possession or is it a contraction of "is"?  Some hybrid approach is probably best. 
@@ -138,7 +138,7 @@ final[,Cum.Probability:=cumsum(Mean.Probability),by = wordcount]
 setkey(final,wordcount)
 ```
 ```{r,, echo = F, cache= FALSE,eval=TRUE}
-g<-ggplot(final[.(1),],aes(log10(1:final[.(1),.N]),Cum.Probability))+geom_line()+ggtitle("Cumulative Probability Density for unigrams by  Vocabulary Size") + xlab("Log 10(Vocabulary Size in Words)") + ylab("Cumulative Probability of Word Inclusion")
+g<-ggplot(final[.(1),],aes(log10(1:final[.(1),.N]),Cum.Probability))+geom_line()+ggtitle("Cumulative Probability Density for unigrams by Vocabulary Size") + xlab("Log 10(Vocabulary Size in Words)") + ylab("Cumulative Probability of Word Inclusion")
 print(g)
 ```
 
@@ -148,14 +148,14 @@ This graph show that a Vocabulary of `r final[wordcount==1 & Cum.Probability<0.5
 Repeating 
 
 ```{r, echo = F, cache =FALSE, eval=true}
-g<-ggplot(final[wordcount==2,],aes(log10(1:final[wordcount==2,.N]),Cum.Probability))+geom_line()+ggtitle("Cumulative Probability Density for bigrams by  Vocabulary Size") + xlab("Log 10(Vocabulary Size in Words)") + ylab("Cumulative Probability of Word Inclusion")
+g<-ggplot(final[wordcount==2,],aes(log10(1:final[wordcount==2,.N]),Cum.Probability))+geom_line()+ggtitle("Cumulative Probability Density for bigrams by Vocabulary Size") + xlab("Log 10(Vocabulary Size in Words)") + ylab("Cumulative Probability of Word Inclusion")
 print(g)
 ```
 
 This graph show that a vocabulary of `r final[wordcount==2 & Cum.Probability<0.5 ,.N]` bigrams has a 50% chance of any a bigram word being in the vocabulary and that even a vocabulary of `r final[wordcount==2 & Cum.Probability<0.9 ,.N]` bigrams only has 90% chance of including the bigram.  
 
-The results are similar with trigrams. With  `r format(final[wordcount==3,.N],big.mark = ",", scientific = FALSE )` unique ngrams a vocabulary with sufficient coverage is going to be too large.
+The results are similar with trigrams. With  `r format(final[wordcount==3,.N],big.mark = ",", scientific = FALSE )` unique ngrams a vocabulary with sufficient coverage is going to be too large to be contained in a web based application.  Instead an approach for predicting based on unseen ngram will have to be developed.
 
 ##Conclusion
 
-The text prediction tool will probably use a trigram model as its basis on a vocabulary of 15,000 words.  The strategies to handle unseen ngrams that are being considered are backoff and smoothing but it has yet to be decided which.  It is intended that the test sample generated in the data cleaning step will be used to assess the accuracy (perplexity) of the possible appraoches.  With respect to the Shiny app, the ideal application will offer a drop down box with three best predictions after the space bar is pressed.  
+The text prediction tool will probably use a trigram model as its basis on a vocabulary of 15,000 words.  The strategies to handle unseen ngrams that are being considered are backoff and smoothing but it has yet to be decided which.  It is intended that the test sample generated in the data cleaning step will be used to assess the accuracy (perplexity) of the possible approaches.  With respect to the Shiny app, the ideal application will offer a drop down box with three best predictions after the space bar is pressed.  
