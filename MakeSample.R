@@ -110,11 +110,6 @@ corpSample<-function(n,size)  {
     profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")    #profanity<-readLines(conf)
     close(conf)
     x<-tm_map(x,tagwords, profanity,replacement = " <P> ")
-    
-    
-    
-    
-    # x<-tm_map(x,removeWords,profanity)
     writeLines("\nReplace profanity with a <P> tag\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
@@ -138,7 +133,7 @@ corpSample<-function(n,size)  {
         
     #replace all sentence ending chars with sentence end tag ,newline and sentence start tag
     
-    x<-tm_map(x, replacechars, '[.?!]+ ',              " <e>\n<s> ") 
+    x<-tm_map(x, replacechars, '[.?!]+ ',              " <e> \n <s> ") 
     writeLines("\nReplace sentence start and end\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
@@ -156,12 +151,12 @@ corpSample<-function(n,size)  {
     writeLines(substring(x[[1]]$content,1,12000),con)
     
     #Replace other umknown characters with a blank
-    x<-tm_map(x, replacechars, '[^a-zA-Z. \n<>\']',         " ")  
+    x<-tm_map(x, replacechars, '[^a-zA-Z \n<>\']',         " ")  
     writeLines("\nRemove other unknown characters\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
     #Remove single letters that are not valid single letters 
-    x<-tm_map(x, replacechars, '[ ][^AaIi\n][ ]',       "") 
+    x<-tm_map(x, replacechars, "[ ][^ai\n][ ]",       " ") 
     writeLines("\nRemove invalid single characters\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
