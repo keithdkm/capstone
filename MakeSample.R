@@ -110,17 +110,14 @@ corpSample<-function(n,size)  {
     profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")    #profanity<-readLines(conf)
     close(conf)
     x<-tm_map(x,tagwords, profanity,replacement = " <P> ")
+    
+    
+    
+    
     # x<-tm_map(x,removeWords,profanity)
     writeLines("\nReplace profanity with a <P> tag\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
-
-# #   remove telephone numbers
-#     x<-tm_map(x, replacechars, '+?0-9{1,4}?[-. ]?(?0-9{1,3}?)?[-. ]?0-9{1,4}[-. ]?0-9{1,4}[-. ]?0-9{1,9}/g',  "<TEL>" )  
-#     writeLines("\nTag tel numbers", con)
-#     writeLines(substring(x[[1]]$content,1,12000),con)
-#    
-#     
    
     #remove stopwords
     if (stopw) {
@@ -129,7 +126,7 @@ corpSample<-function(n,size)  {
       writeLines(substring(x[[1]]$content,1,12000),con)}
     
     #replace numbers with <N> tags
-    x<-tm_map(x, replacechars, '((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   "<N>" )  
+    x<-tm_map(x, replacechars, '((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   " <N> " )  
     writeLines("\nTag Number with <N>", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
@@ -140,6 +137,7 @@ corpSample<-function(n,size)  {
     
         
     #replace all sentence ending chars with sentence end tag ,newline and sentence start tag
+    
     x<-tm_map(x, replacechars, '[.?!]+ ',              " <e>\n<s> ") 
     writeLines("\nReplace sentence start and end\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
@@ -152,13 +150,13 @@ corpSample<-function(n,size)  {
     #   x<-tm_map(x, replacechars, '[@][a-zA-Z]+',"\n")  #remove twitter names
     #   x<-tm_map(x, replacechars, '[#][a-zA-Z]+',"\n")  #remove twitter hashtags
     
-    #All other stop characters and numerics replace with a blank  
-    x<-tm_map(x, replacechars, '[0-9()\"“”:;,_-]', " ") 
+    #Replace other non-alphanumerics with a blank  
+    x<-tm_map(x, replacechars, '[()\"“”:;,_-]', " ") 
     writeLines("\nRemove other stop characters\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
-    #remove all other unknown chars 
-    x<-tm_map(x, replacechars, '[^a-zA-Z. \n<>\']',         "")  
+    #Replace other umknown characters with a blank
+    x<-tm_map(x, replacechars, '[^a-zA-Z. \n<>\']',         " ")  
     writeLines("\nRemove other unknown characters\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
@@ -221,6 +219,16 @@ corpSample<-function(n,size)  {
   
   test.Corpus <<- VCorpus(VectorSource(NULL))
   
+  ##Create a directory to save the sample  
+  
+  run_time <- gsub("[ :-]","_",as.character(Sys.time()))
+  tr.path  <- paste0("Sample Data/",n,"_",size*100,"_",run_time)
+  test.path<-paste0("Test Data/",n,"_",size*100,"_",run_time)
+ 
+  dir.create(tr.path)
+  dir.create(test.path)
+  
+
   for (i in 1:n){
 
     tr.samp   = paste(paste(allblogs[blogs.inds[i,]],collapse = " "),
@@ -235,11 +243,11 @@ corpSample<-function(n,size)  {
     
     test.samp <- clean(VCorpus(VectorSource(test.samp)),FALSE)
     
-    test.Corpus <<- c(test.Corpus,test.samp)   ########experimental
+    #test.Corpus <<- c(test.Corpus,test.samp)   ########experimental
     
-    file.name.tr<-paste0("Sample Data/trsamp_",i,"_",size*100,".RDS")
+    file.name.tr<-paste0("Sample Data/",n,"_",size*100,"_",run_time,"/trsamp_",i,".RDS")
     
-    file.name.test<-paste0("Test Data/testsamp_",i,"_",size*100,".RDS")
+    file.name.test<-paste0("Test Data/",n,"_",size*100,"_",run_time,"/testsamp_",i,".RDS")
     
     saveRDS(tr.samp, file = file.name.tr)
     
@@ -258,11 +266,11 @@ corpSample<-function(n,size)  {
               " percent of the full text and a correpsonding set of Test Data",
               samp.time))
 
-  
+  return(list(tr.path = tr.path,test.path = test.path))
 }
 
 ##Divides table of ngrams into separate tables and calculates the frequency
-make.ngrams<-function(min.ng,max.ng,n,size){
+make.ngrams<-function(path,min.ng,max.ng,n,size){
 
    #Returns ngram count for each ngram
   extr_ngram_counts<-function(tdm) {
@@ -285,15 +293,17 @@ make.ngrams<-function(min.ng,max.ng,n,size){
   
   ngramfreq<-data.table(NULL)
   
+  
+  
   for (i in 1:n) {
     
-    file.name<-paste0("~/R/Capstone/Sample Data/trsamp_",i,"_",as.character(size),".RDS")
+    file.name<-paste0(path,"/trsamp_",i,".RDS")
     
-    print(paste0("Reading ", file.name))
+    print(paste0("Reading ", file.name," in ",path))
     
     tr.samp<-readRDS(file.name)  # Read in hte corpus of prepared samples
     
-    print(paste("Processing Sample", i, " of ",size,"percent at", Sys.time())) 
+    print(paste("Processing Sample ", i, " at", Sys.time())) 
     
     tdm <- TermDocumentMatrix(tr.samp, control = list(wordLengths = c(1,Inf),
                                                       tokenize    = Tokenizer)) ; rm(tr.samp)
@@ -305,7 +315,9 @@ make.ngrams<-function(min.ng,max.ng,n,size){
   
   setkey(ngramfreq,ngram)
   ## Rolls up ngram counts into totals by ngram
-ngramfreq<-unique(ngramfreq[, count := sum(count),by = ngram][, wordcount := stri_count_words(ngram) ])
+
+  
+  ngramfreq<-unique(ngramfreq[, count := sum(count),by = ngram][, wordcount := stri_count_words(ngram) ])
 
   setkey(ngramfreq,wordcount,ngram)
   
@@ -346,10 +358,21 @@ ngramfreq<-unique(ngramfreq[, count := sum(count),by = ngram][, wordcount := str
   
   cat("Finished ",n,"samples in ",timetaken(started.at),"\n") 
   
-  return(ngramfreq)
+ #save the entire ngramfrq table for use in the Interim report 
+  saveRDS(ngramfreq,"Results/Interim.RDS")
+  
+  return (ngramfreq)
+ 
+  
   
     }
  
+
+
+
+
+
+
 
 # Predicts wnext word from a phrase x 
 phrase <-  function(x) {
@@ -380,6 +403,12 @@ phrase <-  function(x) {
 
    
    phrase}
+
+
+
+
+
+
 
 
 #Calculates the perplexity of model x,against the cleaned corpus y.  X shoudl indicate the maximum length of trigrams to use
@@ -418,6 +447,9 @@ perplexity <-function(y) {
   }
 
 
+
+
+
 main<-function(resamp,num.sample, sz.sample, ng.size) {
   
   ## Summary Results are stored in the masterlsit file
@@ -425,9 +457,9 @@ main<-function(resamp,num.sample, sz.sample, ng.size) {
               
   Exec.time<-Sys.time()
 
-  if (resamp) corpSample(num.sample,sz.sample)
+  if (resamp) paths<-corpSample(num.sample,sz.sample)
   
-  make.ngrams(min = 1, max = ng.size, num.sample, sz.sample)
+  make.ngrams(path = paths$tr.path, min = 1, max = ng.size, num.sample, sz.sample)
   
   repo<-repository("~/R/Capstone/")
   
@@ -435,6 +467,7 @@ main<-function(resamp,num.sample, sz.sample, ng.size) {
                     Commit      = substr(branch_target(head(repo)),1,8),
                     N           = paste(num.sample,"samples"), 
                     Size        = paste0(sz.sample,"%"),
+                    DataPath    = paths$tr.path,
                     Model.Size  = ng.size,
                     Load.Time   = load.time,
                     Sample.Time = samp.time,
@@ -446,15 +479,16 @@ main<-function(resamp,num.sample, sz.sample, ng.size) {
                     N.trigrams  = ifelse(exists("trigrams"),trigrams[,.N],0),
                     tri.size    = ifelse(exists("trigrams"),paste0(round(object.size(trigrams)/10^6,2),"Mb"), "0Mb"),
                     N.quadrigrams  = ifelse(exists("quadrigrams"),quadrigrams[,.N],0),
-                    quad.size    = ifelse(exists("quadrigrams"),paste0(round(object.size(quadrigrams)/10^6,2),"Mb"), "0Mb"), 
-                    Perplexity  =  perplexity(test.Corpus))
+                    quad.size    = ifelse(exists("quadrigrams"),paste0(round(object.size(quadrigrams)/10^6,2),"Mb"), "0Mb")
+                    #, Perplexity  =  perplexity(test.Corpus)
+                    )
   
   
   ifelse (file.exists("~/R/Capstone/Results/masterlist.RDS"),
           x<-readRDS("~/R/Capstone/Results/masterlist.RDS"),
           x<-data.table(NULL))
 
-  results<<- rbind(x,  data.table(t(new_results)))
+  results<<- rbind(x,  data.table(t(new_results)),fill = TRUE)
   
   saveRDS(results,"~/R/Capstone/Results/masterlist.RDS")
   
@@ -467,25 +501,6 @@ main<-function(resamp,num.sample, sz.sample, ng.size) {
 
 
 # 
-# test.samp<-VCorpus(VectorSource(""))
-# for(a in 1:100){
-#   test.samp<-c(test.samp,readRDS(paste0("Test Data/testsamp_",a,"_",0.1,".RDS" )))}
-# 
-# 
-# 
-# 
-# 
-# 
-
-
-
-
-
-
-
-  #
-  # bigrams<-ngramfreq[, totalcount := sum(count) , by = .(ngram)][, wordcount := stri_count_words(ngram), ][,pwiw1 := log10(totalcount)-log10(unigrams[stri_extract_first_words(ngramfreq$ngram),count])]
-  
 #   a_spl <- function(dt) {
 #     ll <- unlist(strsplit(dt$PREFIX, "_", fixed=TRUE))
 #     idx <- seq(1, length(ll), by = 2)
@@ -520,28 +535,4 @@ main<-function(resamp,num.sample, sz.sample, ng.size) {
 #   identical(a1, a2) # TRUE
 #   identical(a1, a3) # TRUE
 
-
-#   ngramfreq[, wordcount := stri_count_words(ngram) ]
-# 
-#   setkey(ngramfreq,wordcount,ngram)
-#   
-#   unigrams<- ngramfreq[wordcount == 1, .(count = sum(count)) , by = .(ngram)][,probability := log10(count/sum(count))]
-#   
-#   setkey(unigrams,ngram)
-#   
-#   bigrams <- ngramfreq[wordcount == 2, .(count = sum(count)) , by = .(ngram)][, c("W1", "W2") := tstrsplit(ngram, " ", fixed = TRUE)]
-#   
-#   setkey(bigrams,ngram)
-#   
-#   # bigrams[,pw2_w1 := log10(count/unigrams[stri_extract_first_words(bigrams$ngram),count])]
-#   
-#   bigrams[,pw2_w1 := log10(count/unigrams[bigrams$W1,count])]
-#   
-#   trigrams <- ngramfreq[wordcount == 3, .(count = sum(count)) , by = .(ngram)][, c("W1", "W2","W3") := tstrsplit(ngram, " ", fixed = TRUE)][,W1W2:=paste0(W1," ",W2)]
-#   
-#   setkey(trigrams,W1W2)
-#   
-#   trigrams[, pw3_w2w1 := log10(count/ bigrams[trigrams$W1W2, count])]
-#   
-# quadgrams <- ngramfreq[wordcount == 4, .(count = sum(count)) , by = .(ngram)][, c("W1", "W2","W3","W4") := tstrsplit(ngram, " ", fixed = TRUE)][,W1W2W3:=paste0(W1," ",W2," ",W3)]
 
