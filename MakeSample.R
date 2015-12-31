@@ -269,10 +269,15 @@ corpSample<-function(n,size)  {
   return(list(tr.path = tr.path,test.path = test.path))
 }
 
+
+
+
+
+
 ##Divides table of ngrams into separate tables and calculates the frequency
 make.ngrams<-function(path,min.ng,max.ng,n,size){
 
-   #Returns ngram count for each ngram
+   #Extracts count for each ngram from Term Document matrix
   extr_ngram_counts<-function(tdm) {
     
     tdm<-as.matrix(tdm)
@@ -329,30 +334,30 @@ make.ngrams<-function(path,min.ng,max.ng,n,size){
   
   #BIGRAMS
   
-  if (max.ng>1) {bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(ngram)][, c("W1", "W2") := tstrsplit(ngram, " ", fixed = TRUE)]
+  if (max.ng>1) {bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(ngram)][, c("u", "v") := tstrsplit(ngram, " ", fixed = TRUE)]
   
-                  setkey(bigrams,W1)
+                  setkey(bigrams,u)
                   
-                  bigrams[,pw2_w1 := -log2(count/unigrams[bigrams$W1,count])]}
+                  bigrams[,pv_u := -log2(count/unigrams[bigrams$u,count])]}
     
   #TRIGRAMS
   
-  if (max.ng > 2) {trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngram)][, c("W1", "W2","W3") := tstrsplit(ngram, " ", fixed = TRUE)][,W1W2:=paste0(W1," ",W2)]
+if (max.ng > 2) {trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w") := tstrsplit(ngram, " ", fixed = TRUE)][,uv:=paste0(u," ",v)]
   
-                    setkey(trigrams,W1W2)
+                    setkey(trigrams,uv)
                     
-                    trigrams[, pw3_w2w1 := -log2(count/ bigrams[trigrams$W1W2, count])]}
+                    trigrams[, pw_uv := -log2(count/ bigrams[trigrams$uv, count])]}
                 
 
   #QUADRIGRAMS
                 
-  if (max.ng > 3) {quadrigrams <<- ngramfreq[.(4), .(count = sum(count)) , by = .(ngram)][, c("W1", "W2","W3","W4") := tstrsplit(ngram, " ", fixed = TRUE)][,W1W2W3:=paste0(W1," ",W2," ",W3)]
+  if (max.ng > 3) {quadrigrams <<- ngramfreq[.(4), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w","x") := tstrsplit(ngram, " ", fixed = TRUE)][,uvw:=paste0(u," ",v," ",w)]
   
-                    setkey(quadrigrams,W1W2W3)
+                    setkey(quadrigrams,uvw)
                     
-                    quadrigrams[,pw4_w3w2w1 := -log2(count/ trigrams[quadrigrams$W1W2W3, count])]}
+                    quadrigrams[,pw_uvw := -log2(count/ trigrams[quadrigrams$uvw, count])]}
                   
-                    # quadrigrams[,p4_w3w2w1 := log10(count)]
+                    # quadrigrams[,p4_wvu := log10(count)]
                     
                     ngram.time<<-timetaken(started.at)
   
@@ -384,17 +389,17 @@ phrase <-  function(x) {
         phrase.length <- stri_count_words(x) 
         
         if (phrase.length == 3) 
-          phrase<-quadrigrams[x, .(ngram,pw4_w3w2w1)][order(pw4_w3w2w1)[1:3], ngram]
+          phrase<-quadrigrams[x, .(ngram,pw_uvw)][order(pw_uvw)[1:3], ngram]
         
         if (is.na(phrase[1])) {phrase <- paste(stri_extract_all_words(x)[[1]][2:3], collapse = " ") ; phrase.length<-phrase.length-1; print("Backing off to trigrams")}
         
         if ( phrase.length  == 2) 
-          phrase<-trigrams[x , .(ngram,pw3_w2w1)][order(pw3_w2w1)[1:3], ngram]
+          phrase<-trigrams[x , .(ngram,pw_uv)][order(pw_uv)[1:3], ngram]
 
         if (is.na(phrase[1])) {phrase <- paste(stri_extract_all_words(x)[[1]][2], collapse = " ") ; phrase.length<-phrase.length-1; print("Backing off to bigrams")}
         
         if ( phrase.length  == 1) 
-         phrase<-bigrams[x, .(ngram,pw2_w1)][order(pw2_w1)[1:3],ngram]
+         phrase<-bigrams[x, .(ngram,pv_u)][order(pv_u)[1:3],ngram]
        
         if (is.na(phrase[1])) { phrase.length<-phrase.length-1; print("Backing off to unigrams")}
         
@@ -421,8 +426,8 @@ perplexity <-function(y) {
                             
                             b<-stri_extract_all_words(x)[[1]][1:2]
                             
-                            phr.prob <- sum(trigrams[paste0("<e> <s> ",b[1]),pw3_w2w1],
-                                       trigrams[paste0("<s> ",b[1]," ",b[2]),pw3_w2w1],na.rm = TRUE)
+                            phr.prob <- sum(trigrams[paste0("<e> <s> ",b[1]),pw_uv],
+                                       trigrams[paste0("<s> ",b[1]," ",b[2]),pw_uv],na.rm = TRUE)
                             
                             if(word.count>2) {b <- NGramTokenizer(x,     
                                                Weka_control(min        = 3, 
@@ -432,7 +437,7 @@ perplexity <-function(y) {
                             
                             phr.prob <- sum(phr.prob, sum(sapply(b, 
                                                    function(z) {
-                                                     trigrams[z,pw3_w2w1]}),na.rm=TRUE),na.rm=TRUE)
+                                                     trigrams[z,pw_uv]}),na.rm=TRUE),na.rm=TRUE)
                             
                             }
                                             
@@ -457,7 +462,7 @@ main<-function(resamp,num.sample, sz.sample, ng.size) {
               
   Exec.time<-Sys.time()
 
-  if (resamp) paths<-corpSample(num.sample,sz.sample)
+  if (resamp) paths<<-corpSample(num.sample,sz.sample)
   
   make.ngrams(path = paths$tr.path, min = 1, max = ng.size, num.sample, sz.sample)
   
