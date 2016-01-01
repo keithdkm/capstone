@@ -331,7 +331,7 @@ make.ngrams<-function(path,min.ng,max.ng,n,size){
   
   if (max.ng>1) {bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(ngram)][, c("u", "v") := tstrsplit(ngram, " ", fixed = TRUE)]
   
-                  setkey(bigrams,u)
+                  setkey(bigrams,ngram)
                   
                   bigrams[,pv_u := -log2(count/unigrams[bigrams$u,count])]}
     
@@ -339,7 +339,7 @@ make.ngrams<-function(path,min.ng,max.ng,n,size){
   
 if (max.ng > 2) {trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w") := tstrsplit(ngram, " ", fixed = TRUE)][,uv:=paste0(u," ",v)]
   
-                    setkey(trigrams,uv)
+                    setkey(trigrams,ngram)
                     
                     trigrams[, pw_uv := -log2(count/ bigrams[trigrams$uv, count])]}
                 
@@ -348,7 +348,7 @@ if (max.ng > 2) {trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngr
                 
   if (max.ng > 3) {quadrigrams <<- ngramfreq[.(4), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w","x") := tstrsplit(ngram, " ", fixed = TRUE)][,uvw:=paste0(u," ",v," ",w)]
   
-                    setkey(quadrigrams,uvw)
+                    setkey(quadrigrams,ngram)
                     
                     quadrigrams[,pw_uvw := -log2(count/ trigrams[quadrigrams$uvw, count])]}
                   
