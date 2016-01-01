@@ -133,10 +133,10 @@ corpSample<-function(n,size)  {
         
     #replace all sentence ending chars with sentence end tag ,newline and sentence start tag
     
-    x<-tm_map(x, replacechars, '[.?!]+ ',              " <e> \n <s> ") 
-    writeLines("\nReplace sentence start and end\n", con)
-    writeLines(substring(x[[1]]$content,1,12000),con)
-    
+#     x<-tm_map(x, replacechars, '[.?!]+ ',              " <e> \n <s> ") 
+#     writeLines("\nReplace sentence start and end\n", con)
+#     writeLines(substring(x[[1]]$content,1,12000),con)
+#     
     #remove apostrohes from contractions 
 #     x<-tm_map(x, replacechars, '[\'\`]',      "" )  
 #     writeLines("\nRemove apostrophes", con)
