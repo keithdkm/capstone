@@ -126,8 +126,12 @@ corpSample<-function(n,size)  {
     writeLines(substring(x[[1]]$content,1,12000),con)
     
     #replace all apostrophes with space '
-    x<-tm_map(x, replacechars, '\'',              " \'") 
-    writeLines("\nReplace apostrophes with space apostrophes so that tokenizer treats contractions as two words", con)
+    ## TEMPORARY replacing apostrohes with NULLS to treat contractions/possesives as unigrams
+    # x<-tm_map(x, replacechars, '\'',              " \'") 
+    x<-tm_map(x, replacechars, '\'',              "") 
+    # writeLines("\n Replace apostrophes with space apostrophes so that tokenizer treats contractions as two words", con)
+    writeLines("\n Replace apostrophes with NULL  so that tokenizer treats contractions as one words", con)
+    
     writeLines(substring(x[[1]]$content,1,12000),con)
     
         
@@ -335,7 +339,7 @@ make.ngrams<-function(path,min.ng,max.ng,n,size){
                   
                   bigrams[,pv_u := -log2(count/unigrams[bigrams$u,count])]}
                 
-                  setkey(bigrams,u)
+                  
     
   #TRIGRAMS
   
@@ -345,7 +349,7 @@ if (max.ng > 2) {trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngr
                     
                     trigrams[, pw_uv := -log2(count/ bigrams[trigrams$uv, count])]}
                 
-                    setkey(trigrams,uv)
+                    
 
   #QUADRIGRAMS
                 
@@ -357,6 +361,8 @@ if (max.ng > 2) {trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngr
                   
                     # quadrigrams[,p4_wvu := log10(count)]
                     
+                    setkey(bigrams,u)
+                    setkey(trigrams,uv)
                     setkey(quadrigrams,uvw)
                 
                     ngram.time<<-timetaken(started.at)
@@ -384,10 +390,13 @@ vocabulary<-function(coverage){
   setorder(unigrams,-count)
 
   unigrams <<- unigrams[,Mean.Probability := count/sum(count)][,Cum.Probability:=cumsum(Mean.Probability)][Cum.Probability<=(coverage/100),][order(ngram),]
-  unigrams [ngram = "<UNK", Mean.Probability := 0.1]
+
   # Remove additional probability columns
  ## unigrams[,c("Mean.Probability","Cum.Probability") := NULL]
-  }
+}
+
+
+
 # Predicts wnext word from a phrase x 
 phrase <-  function(x) {
   
@@ -398,25 +407,25 @@ phrase <-  function(x) {
         phrase.length <- stri_count_words(x) 
         
         if (phrase.length == 3) 
-          phrase<-quadrigrams[x, .(ngram,pw_uvw)][order(pw_uvw)[1:3], ngram]
+          y<-quadrigrams[x, .(ngram,pw_uvw)][order(pw_uvw)[1:3], ngram]
         
-        if (is.na(x[1])) {x <- paste(stri_extract_all_words(x)[[1]][2:3], collapse = " ") ; phrase.length<-phrase.length-1; print("Backing off to trigrams")}
+        if (is.na(y[1])) {x <- paste(stri_extract_all_words(x)[[1]][2:3], collapse = " ") ; phrase.length<-phrase.length-1; print("Backing off to trigrams")}
         
         if ( phrase.length  == 2) 
-          phrase<-trigrams[x , .(ngram,pw_uv)][order(pw_uv)[1:3], ngram]
+          y<-trigrams[x , .(ngram,pw_uv)][order(pw_uv)[1:3], ngram]
 
-        if (is.na(x[1])) {x <- paste(stri_extract_all_words(x)[[1]][2], collapse = " ") ; phrase.length<-phrase.length-1; print("Backing off to bigrams")}
+        if (is.na(y[1])) {x <- paste(stri_extract_all_words(x)[[1]][2], collapse = " ") ; phrase.length<-phrase.length-1; print("Backing off to bigrams")}
         
         if ( phrase.length  == 1) 
-         phrase<-bigrams[x, .(ngram,pv_u)][order(pv_u)[1:3],ngram]
+         y<-bigrams[x, .(ngram,pv_u)][order(pv_u)[1:3],ngram]
        
-        if (is.na(x[1])) { phrase.length<-phrase.length-1; print("Backing off to unigrams")}
+        if (is.na(y[1])) { phrase.length<-phrase.length-1; print("Backing off to unigrams")}
         
         if (phrase.length == 0)
-         phrase<-unigrams[order(probability),ngram ][1:3]
+         y<-unigrams[order(probability),ngram ][1:3]
 
    
-   phrase}
+   y}
 
 
 
@@ -475,11 +484,18 @@ main<-function(resamp,num.sample, sz.sample, ng.size, coverage) {
   
   make.ngrams(path = paths$tr.path, min = 1, max = ng.size, num.sample, sz.sample)
   
-  vocab<-vocabulary(coverage)
+  vocab<<-vocabulary(coverage)
   
-  unigrams<-unigrams[]
+
   
   repo<-repository("~/R/Capstone/")
+  
+  
+  ##read in current results table
+  ifelse (file.exists("~/R/Capstone/Results/masterlist.RDS"),
+          x<-readRDS("~/R/Capstone/Results/masterlist.RDS"),
+          x<-data.table(NULL))
+  
   
   new_results<-list(Time        = strftime(Exec.time, "%c"),
                     Commit      = substr(branch_target(head(repo)),1,8),
@@ -504,9 +520,7 @@ main<-function(resamp,num.sample, sz.sample, ng.size, coverage) {
                     )
   
   
-  ifelse (file.exists("~/R/Capstone/Results/masterlist.RDS"),
-          x<-readRDS("~/R/Capstone/Results/masterlist.RDS"),
-          x<-data.table(NULL))
+  
 
   results<<- rbind(x,  data.table(t(new_results)),fill = TRUE)
   
