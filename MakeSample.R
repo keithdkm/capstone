@@ -334,6 +334,8 @@ make.ngrams<-function(path,min.ng,max.ng,n,size){
                   setkey(bigrams,ngram)
                   
                   bigrams[,pv_u := -log2(count/unigrams[bigrams$u,count])]}
+                
+                  setkey(bigrams,u)
     
   #TRIGRAMS
   
@@ -343,6 +345,7 @@ if (max.ng > 2) {trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngr
                     
                     trigrams[, pw_uv := -log2(count/ bigrams[trigrams$uv, count])]}
                 
+                    setkey(trigrams,uv)
 
   #QUADRIGRAMS
                 
@@ -354,6 +357,8 @@ if (max.ng > 2) {trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngr
                   
                     # quadrigrams[,p4_wvu := log10(count)]
                     
+                    setkey(quadrigrams,uvw)
+                
                     ngram.time<<-timetaken(started.at)
   
   cat("Finished ",n,"samples in ",timetaken(started.at),"\n") 
@@ -372,8 +377,17 @@ if (max.ng > 2) {trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngr
 
 
 
+## examines unigram table and returns the lsit of words required to get the specified coverage
 
+vocabulary<-function(coverage){
+  
+  setorder(unigrams,-count)
 
+  unigrams <<- unigrams[,Mean.Probability := count/sum(count)][,Cum.Probability:=cumsum(Mean.Probability)][Cum.Probability<=(coverage/100),][order(ngram),]
+  unigrams [ngram = "<UNK", Mean.Probability := 0.1]
+  # Remove additional probability columns
+ ## unigrams[,c("Mean.Probability","Cum.Probability") := NULL]
+  }
 # Predicts wnext word from a phrase x 
 phrase <-  function(x) {
   
@@ -386,17 +400,17 @@ phrase <-  function(x) {
         if (phrase.length == 3) 
           phrase<-quadrigrams[x, .(ngram,pw_uvw)][order(pw_uvw)[1:3], ngram]
         
-        if (is.na(phrase[1])) {phrase <- paste(stri_extract_all_words(x)[[1]][2:3], collapse = " ") ; phrase.length<-phrase.length-1; print("Backing off to trigrams")}
+        if (is.na(x[1])) {x <- paste(stri_extract_all_words(x)[[1]][2:3], collapse = " ") ; phrase.length<-phrase.length-1; print("Backing off to trigrams")}
         
         if ( phrase.length  == 2) 
           phrase<-trigrams[x , .(ngram,pw_uv)][order(pw_uv)[1:3], ngram]
 
-        if (is.na(phrase[1])) {phrase <- paste(stri_extract_all_words(x)[[1]][2], collapse = " ") ; phrase.length<-phrase.length-1; print("Backing off to bigrams")}
+        if (is.na(x[1])) {x <- paste(stri_extract_all_words(x)[[1]][2], collapse = " ") ; phrase.length<-phrase.length-1; print("Backing off to bigrams")}
         
         if ( phrase.length  == 1) 
          phrase<-bigrams[x, .(ngram,pv_u)][order(pv_u)[1:3],ngram]
        
-        if (is.na(phrase[1])) { phrase.length<-phrase.length-1; print("Backing off to unigrams")}
+        if (is.na(x[1])) { phrase.length<-phrase.length-1; print("Backing off to unigrams")}
         
         if (phrase.length == 0)
          phrase<-unigrams[order(probability),ngram ][1:3]
@@ -450,7 +464,7 @@ perplexity <-function(y) {
 
 
 
-main<-function(resamp,num.sample, sz.sample, ng.size) {
+main<-function(resamp,num.sample, sz.sample, ng.size, coverage) {
   
   ## Summary Results are stored in the masterlsit file
   # rm(GlobalEnv::unigrams);rm(trigrams);rm(bigrams);rm(results)
@@ -461,10 +475,15 @@ main<-function(resamp,num.sample, sz.sample, ng.size) {
   
   make.ngrams(path = paths$tr.path, min = 1, max = ng.size, num.sample, sz.sample)
   
+  vocab<-vocabulary(coverage)
+  
+  unigrams<-unigrams[]
+  
   repo<-repository("~/R/Capstone/")
   
   new_results<-list(Time        = strftime(Exec.time, "%c"),
                     Commit      = substr(branch_target(head(repo)),1,8),
+                    Notes       = commits(repo)[1][[1]],
                     N           = paste(num.sample,"samples"), 
                     Size        = paste0(sz.sample,"%"),
                     DataPath    = paths$tr.path,
@@ -479,7 +498,8 @@ main<-function(resamp,num.sample, sz.sample, ng.size) {
                     N.trigrams  = ifelse(exists("trigrams"),trigrams[,.N],0),
                     tri.size    = ifelse(exists("trigrams"),paste0(round(object.size(trigrams)/10^6,2),"Mb"), "0Mb"),
                     N.quadrigrams  = ifelse(exists("quadrigrams"),quadrigrams[,.N],0),
-                    quad.size    = ifelse(exists("quadrigrams"),paste0(round(object.size(quadrigrams)/10^6,2),"Mb"), "0Mb")
+                    quad.size    = ifelse(exists("quadrigrams"),paste0(round(object.size(quadrigrams)/10^6,2),"Mb"), "0Mb"),
+                    Coverage    = coverage
                     #, Perplexity  =  perplexity(test.Corpus)
                     )
   
