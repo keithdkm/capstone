@@ -361,11 +361,11 @@ if (max.ng > 2) {trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngr
                   
                     # quadrigrams[,p4_wvu := log10(count)]
                     
-                    setkey(bigrams,u)
-                    setkey(trigrams,uv)
-                    setkey(quadrigrams,uvw)
+  if (max.ng > 1)   setkey(bigrams,u)
+  if (max.ng > 2)   setkey(trigrams,uv)
+  if (max.ng > 3)   setkey(quadrigrams,uvw)
                 
-                    ngram.time<<-timetaken(started.at)
+  ngram.time<<-timetaken(started.at)
   
   cat("Finished ",n,"samples in ",timetaken(started.at),"\n") 
   
@@ -396,90 +396,135 @@ vocabulary<-function(coverage){
 }
 
 
+prune<-function(n){
 
-# Predicts wnext word from a phrase x 
-phrase <-  function(x) {
+# remove words not in the vocabulary    
+if (n==4) quadrigrams<<- quadrigrams[x %in% vocab$ngram,]
+if (n==3) trigrams   <<-    trigrams[x %in% vocab$ngram,]
+if (n==2) bigrams    <<-    bigrams [x %in% vocab$ngram,]
+  
+  }
+
+
+# Predicts n possible next words from a phrase x 
+phrase <-  function(target,n) {
   
   
-        x<-tolower(x)
+        target<-tolower(target)
          
-        # phrase <- ""
-        phrase.length <- stri_count_words(x) 
+        y <- ""
+        phrase.length <- stri_count_words(target) 
+        
+       #If phrase is longer than 3 words, discard all but the last 3
+        
+        if (phrase.length>3){ target<-paste(stri_extract_all_words(target)[[1]][(phrase.length-2):phrase.length], collapse = " ")
+        phrase.length<-3}
         
         if (phrase.length == 3) 
-          y<-quadrigrams[x, .(ngram,pw_uvw)][order(pw_uvw)[1:3], ngram]
+          y<-quadrigrams[target, .(x,pw_uvw)][order(pw_uvw)[1:n],x ]
         
-        if (is.na(y[1])) {x <- paste(stri_extract_all_words(x)[[1]][2:3], collapse = " ") ; phrase.length<-phrase.length-1; print("Backing off to trigrams")}
+        if (is.na(y[1])) {target <- paste(stri_extract_all_words(target)[[1]][2:3], collapse = " ") ; phrase.length<-phrase.length-1; #print("Backing off to trigrams")
+        }
         
         if ( phrase.length  == 2) 
-          y<-trigrams[x , .(ngram,pw_uv)][order(pw_uv)[1:3], ngram]
+          y<-trigrams[target , .(w,pw_uv)][order(pw_uv)[1:n], w]
 
-        if (is.na(y[1])) {x <- paste(stri_extract_all_words(x)[[1]][2], collapse = " ") ; phrase.length<-phrase.length-1; print("Backing off to bigrams")}
+        if (is.na(y[1])) {target <- paste(stri_extract_all_words(target)[[1]][2], collapse = " ") ; phrase.length<-phrase.length-1; #print("Backing off to bigrams")
+        }
         
         if ( phrase.length  == 1) 
-         y<-bigrams[x, .(ngram,pv_u)][order(pv_u)[1:3],ngram]
+         y<-bigrams[target, .(v,pv_u)][order(pv_u)[1:n],v]
        
-        if (is.na(y[1])) { phrase.length<-phrase.length-1; print("Backing off to unigrams")}
+        if (is.na(y[1])) { phrase.length<-phrase.length-1; #print("Backing off to unigrams")
+        }
         
         if (phrase.length == 0)
-         y<-unigrams[order(probability),ngram ][1:3]
+         y<-unigrams[order(probability),ngram ][1:n]
 
    
    y}
 
 
+#measures model accuracy against n test strings
+accuracy<-function(n){
+  
+   path<-paths$test.path
+  
+  for (i in 1:n) {
+    
+    file.name<-paste0(path,"/testsamp_",i,".RDS")
+    
+    print(paste0("Reading ", file.name," in ",path))
+    
+    test.samp<-readRDS(file.name)  # Read in hte corpus of prepared samples
+    
+    print(paste("Measuring accuracy with Sample ", i, " at", Sys.time())) 
+  
+    testlist<-stri_extract_all_words(test.samp)[[1]]
+  
+    correct<-0
+    
+    started.at = proc.time()
+    
+    for (j in 1:(length(testlist)-3)) 
+    if (phrase(paste(testlist[j:j+2],collapse = " "),1) == testlist[j+3]) correct<-correct+1
+  
+    acc_time<-timetaken(started.at)
+    
+    print(paste("Sample ",i," ", length(testlist), paste(round(correct/(length(testlist)-3)*100,1),"%",sep = ""),  acc_time," secs"))
+  }
 
-
-
-
+}
 
 
 #Calculates the perplexity of model x,against the cleaned corpus y.  X shoudl indicate the maximum length of trigrams to use
-perplexity <-function(y) {
-  
-  
-  a<-unlist(stri_split_regex(y[[1]]$content,"<e>\n<s>"))
-  
-  c<-data.frame(t(sapply(a[1:200], function(x){ word.count <- stri_count_words(x);
-                            
-                            b<-stri_extract_all_words(x)[[1]][1:2]
-                            
-                            phr.prob <- sum(trigrams[paste0("<e> <s> ",b[1]),pw_uv],
-                                       trigrams[paste0("<s> ",b[1]," ",b[2]),pw_uv],na.rm = TRUE)
-                            
-                            if(word.count>2) {b <- NGramTokenizer(x,     
-                                               Weka_control(min        = 3, 
-                                                            max        = 3,
-                                                            delimiters = ". "));
-                            
-                            
-                            phr.prob <- sum(phr.prob, sum(sapply(b, 
-                                                   function(z) {
-                                                     trigrams[z,pw_uv]}),na.rm=TRUE),na.rm=TRUE)
-                            
-                            }
-                                            
-                            
-                            data.frame(sentence = x,
-                                        M = word.count,
-                                        sent.prob = phr.prob)})))
-
-   
-  sum(unlist(c$sent.prob))/sum(unlist(c$M))
-  
-  }
-
-
-
+# perplexity <-function(y) {
+#   
+#   
+#   a<-unlist(stri_split_regex(y[[1]]$content,"<e>\n<s>"))
+#   
+#   c<-data.frame(t(sapply(a[1:200], function(x){ word.count <- stri_count_words(x);
+#                             
+#                             b<-stri_extract_all_words(x)[[1]][1:2]
+#                             
+#                             phr.prob <- sum(trigrams[paste0("<e> <s> ",b[1]),pw_uv],
+#                                        trigrams[paste0("<s> ",b[1]," ",b[2]),pw_uv],na.rm = TRUE)
+#                             
+#                             if(word.count>2) {b <- NGramTokenizer(x,     
+#                                                Weka_control(min        = 3, 
+#                                                             max        = 3,
+#                                                             delimiters = ". "));
+#                             
+#                             
+#                             phr.prob <- sum(phr.prob, sum(sapply(b, 
+#                                                    function(z) {
+#                                                      trigrams[z,pw_uv]}),na.rm=TRUE),na.rm=TRUE)
+#                             
+#                             }
+#                                             
+#                             
+#                             data.frame(sentence = x,
+#                                         M = word.count,
+#                                         sent.prob = phr.prob)})))
+# 
+#    
+#   sum(unlist(c$sent.prob))/sum(unlist(c$M))
+#   
+#   }
+# 
 
 
-main<-function(resamp,num.sample, sz.sample, ng.size, coverage) {
+
+
+main<-function(resamp,path,num.sample, sz.sample, ng.size, coverage) {
   
   ## Summary Results are stored in the masterlsit file
   # rm(GlobalEnv::unigrams);rm(trigrams);rm(bigrams);rm(results)
               
   Exec.time<-Sys.time()
-
+#If reusing a sample take passed in path
+  paths$tr.path <<- path
+#otherwise make a new sample    
   if (resamp) paths<<-corpSample(num.sample,sz.sample)
   
   make.ngrams(path = paths$tr.path, min = 1, max = ng.size, num.sample, sz.sample)
