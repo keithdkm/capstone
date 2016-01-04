@@ -327,12 +327,16 @@ make.ngrams<-function(path,min.ng,max.ng,n,size){
   
   # UNIGRAMS
   
+  tags<-c("<p>","<n>", "<s>","<e>")
+  
   if (max.ng>0) {
   unigrams<<- ngramfreq[.(1), 
                         .(count = sum(count)) , 
-                        by = .(ngram)][]
+                        by = .(ngram)]
+  
   old_count<- unigrams[,sum(count)] 
-  unigrams<<-rbind(unigrams[,Mean.Probability := count/sum(count)][order(-count),
+  #unigrams<<-unigrams[!(ngram %in% tags),]  #remove tagged counts - we don't need to know probabilities of tags for  the moment
+  unigrams<<-rbind(unigrams[!(ngram %in% tags),Mean.Probability := count/sum(count)][(ngram %in% tags),Mean.Probability := 0][order(-count),
                                                                    ':='(Cum.Probability  = cumsum(Mean.Probability),
                                                                    probability = -log2(Mean.Probability))][Cum.Probability<=(coverage/100),][order(ngram),],
                    
@@ -341,25 +345,29 @@ make.ngrams<-function(path,min.ng,max.ng,n,size){
                               Mean.Probability = 0.05,
                               Cum.Probability  = 1,
                               probability = -log2(0.05)),fill = T )
+  
+
                    
                    }
                  
-                 
-  
-
-  
-  
-  
-  
+        
                 setkey(unigrams,ngram)
-  
+
   #BIGRAMS
   
-  if (max.ng>1) {bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(ngram)][, c("u", "v") := tstrsplit(ngram, " ", fixed = TRUE)]
+  if (max.ng>1) {
+    
+  bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(ngram)][, c("u", "v") := tstrsplit(ngram, " ", fixed = TRUE)]
   
-                  setkey(bigrams,ngram)
+  bigrams<<- bigrams[!(u %in% c(unigrams[,ngram], tags)), ':='(u = "<UNK>",count = sum(count)), by = v][ v %in% unigrams[,ngram]]
+  
+  setkey(bigrams,u,v)
+  
+  bigrams<-unique(bigrams)
                   
-                  bigrams[,pv_u := -log2(count/unigrams[bigrams$u,count])]}
+  bigrams[,':=' (pv_u = -log2(count/unigrams[bigrams$u,count])
+                 )]
+  }
                 
                   
     
