@@ -327,7 +327,29 @@ make.ngrams<-function(path,min.ng,max.ng,n,size){
   
   # UNIGRAMS
   
-  if (max.ng>0) unigrams<<- ngramfreq[.(1), .(count = sum(count)) , by = .(ngram)][,probability := -log2(count/sum(count))]
+  if (max.ng>0) {
+  unigrams<<- ngramfreq[.(1), 
+                        .(count = sum(count)) , 
+                        by = .(ngram)][]
+  old_count<- unigrams[,sum(count)] 
+  unigrams<<-rbind(unigrams[,Mean.Probability := count/sum(count)][order(-count),
+                                                                   ':='(Cum.Probability  = cumsum(Mean.Probability),
+                                                                   probability = -log2(Mean.Probability))][Cum.Probability<=(coverage/100),][order(ngram),],
+                   
+                   data.table(ngram       = "<UNK>", 
+                              count       = old_count - unigrams[Cum.Probability<=(coverage/100),sum(count)],
+                              Mean.Probability = 0.05,
+                              Cum.Probability  = 1,
+                              probability = -log2(0.05)),fill = T )
+                   
+                   }
+                 
+                 
+  
+
+  
+  
+  
   
                 setkey(unigrams,ngram)
   
@@ -388,9 +410,16 @@ if (max.ng > 2) {trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngr
 vocabulary<-function(coverage){
   
   setorder(unigrams,-count)
-
-  unigrams <<- unigrams[,Mean.Probability := count/sum(count)][,Cum.Probability:=cumsum(Mean.Probability)][Cum.Probability<=(coverage/100),][order(ngram),]
-
+  old_count<-unigrams[,sum(count)]
+  
+  ##remove all unigrams that are in the least probable (100-coverage)% of unigrams and add an <UNK> unigram to replace unseen unigrams (OOV words)  
+  unigrams <<- rbind(unigrams[,Mean.Probability := count/sum(count)][,Cum.Probability:=cumsum(Mean.Probability)][Cum.Probability<=(coverage/100),][order(ngram),], 
+                     data.table(ngram = "<UNK>", count = total_count - unigrams[,sum(count)], probability = -log2(0.05)),fill = T )
+  
+  new_count<-unigrams[,sum(count)]
+  unigrams[ngram=="<UNK>", count:=old_count-new_count]
+  
+  
   # Remove additional probability columns
  ## unigrams[,c("Mean.Probability","Cum.Probability") := NULL]
 }
@@ -400,20 +429,27 @@ prune<-function(n){
 
 # remove words not in the vocabulary    
 if (n==4) quadrigrams<<- quadrigrams[x %in% vocab$ngram,]
-if (n==3) trigrams   <<-    trigrams[x %in% vocab$ngram,]
-if (n==2) bigrams    <<-    bigrams [x %in% vocab$ngram,]
+if (n==3) trigrams   <<-    trigrams[w %in% vocab$ngram,]
+if (n==2) bigrams    <<-    bigrams [v %in% vocab$ngram,]
   
   }
 
 
 # Predicts n possible next words from a phrase x 
-phrase <-  function(target,n) {
+phrase <-  function(target,n,model) {
+  
+  y <- ""
+  
+  #########!!!!!!!!!!!!!!   This needs to clean target rather than just lower casing it
+  target<-tolower(target)
   
   
-        target<-tolower(target)
-         
-        y <- ""
-        phrase.length <- stri_count_words(target) 
+  phrase.length <- stri_count_words(target) 
+  
+  
+  if (model %in% c("Backoff")) {
+        
+  
         
        #If phrase is longer than 3 words, discard all but the last 3
         
@@ -441,7 +477,12 @@ phrase <-  function(target,n) {
         if (phrase.length == 0)
          y<-unigrams[order(probability),ngram ][1:n]
 
-   
+  }
+  
+  else if (model=="Interpolate"){
+    
+  }
+  else print("Not a valid model")
    y}
 
 
@@ -450,6 +491,12 @@ accuracy<-function(n){
   
    path<-paths$test.path
   
+   phrases<-""
+   actual_words<-""
+   pred_words<-""
+   
+   
+   
   for (i in 1:n) {
     
     file.name<-paste0(path,"/testsamp_",i,".RDS")
@@ -461,21 +508,113 @@ accuracy<-function(n){
     print(paste("Measuring accuracy with Sample ", i, " at", Sys.time())) 
   
     testlist<-stri_extract_all_words(test.samp)[[1]]
-  
+    testlength<-round((length(testlist)-3))
     correct<-0
     
     started.at = proc.time()
     
-    for (j in 1:(length(testlist)-3)) 
-    if (phrase(paste(testlist[j:j+2],collapse = " "),1) == testlist[j+3]) correct<-correct+1
+    for (j in 1:testlength) {
+    new_phrase   <- paste(testlist[j:(j+2)],collapse = " ") 
+    new_pred     <- phrase(new_phrase,1,model = "Backoff")
+    new_actual   <- testlist[j+3]
+    phrases      <- c(phrases,new_phrase)
+    actual_words <- c(actual_words,new_actual)
+    pred_words   <- c(pred_words,new_pred)
+    
+    }
   
+    
+    
     acc_time<-timetaken(started.at)
     
-    print(paste("Sample ",i," ", length(testlist), paste(round(correct/(length(testlist)-3)*100,1),"%",sep = ""),  acc_time," secs"))
+    print(paste("Sample ",
+                i,
+                " ",
+                testlength, 
+                paste(round(count(actual_words==pred_words)[2,2]/testlength*100,2),"%",sep = ""), 
+                round(as.numeric(as.difftime(acc_time,  format="%H:%M:%S",units = "secs"))/testlength,2),
+                " seconds per prediction" ))
+    
   }
 
+   Correct <- (actual_words==pred_words)
+   acc_test_results<<-cbind(phrases,actual_words,pred_words, Correct)
+   
+   return (round(count(Correct)[2,2]/nrow(acc_test_results)*100,1))
 }
 
+
+
+
+
+
+main<-function(resamp,path,num.sample, sz.sample, ng.size, coverage) {
+  
+  ## Summary Results are stored in the masterlsit file
+  # rm(GlobalEnv::unigrams);rm(trigrams);rm(bigrams);rm(results)
+              
+  Exec.time<-Sys.time()
+#If reusing a sample take passed in path
+  paths$tr.path <<- path
+#otherwise make a new sample    
+  if (resamp) paths<<-corpSample(num.sample,sz.sample)
+  
+  make.ngrams(path = paths$tr.path, min = 1, max = ng.size, num.sample, sz.sample)
+  
+  vocab<<-vocabulary(coverage)
+  
+  
+  
+  repo<-repository("~/R/Capstone/")
+  
+  
+  ##read in current results table
+  ifelse (file.exists("~/R/Capstone/Results/masterlist.RDS"),
+          x<-readRDS("~/R/Capstone/Results/masterlist.RDS"),
+          x<-data.table(NULL))
+  
+  
+  new_results<-list(Time        = strftime(Exec.time, "%c"),
+                    Commit      = substr(branch_target(head(repo)),1,8),
+                    Notes       = commits(repo)[1][[1]],
+                    N           = paste(num.sample,"samples"), 
+                    Size        = paste0(sz.sample,"%"),
+                    DataPath    = paths$tr.path,
+                    Model.Size  = ng.size,
+                    Load.Time   = load.time,
+                    Sample.Time = samp.time,
+                    Ngram.Time  = ngram.time,
+                    N.unigrams  = unigrams[,.N],
+                    U.size      = paste0(round(object.size(unigrams)/10^6,2),"Mb"),
+                    N.bigrams   = bigrams[,.N],
+                    bi.size     = paste0(round(object.size(bigrams)/10^6,2),"Mb"),
+                    N.trigrams  = ifelse(exists("trigrams"),trigrams[,.N],0),
+                    tri.size    = ifelse(exists("trigrams"),paste0(round(object.size(trigrams)/10^6,2),"Mb"), "0Mb"),
+                    N.quadrigrams  = ifelse(exists("quadrigrams"),quadrigrams[,.N],0),
+                    quad.size    = ifelse(exists("quadrigrams"),paste0(round(object.size(quadrigrams)/10^6,2),"Mb"), "0Mb"),
+                    Coverage    = coverage,
+                    Accuracy    =  accuracy(1)
+                    #, Perplexity  =  perplexity(test.Corpus)
+                    )
+  
+  
+  
+
+  results<<- rbind(x,  data.table(t(new_results)),fill = TRUE)
+  
+  saveRDS(results,"~/R/Capstone/Results/masterlist.RDS")
+  
+  
+  
+  
+  }
+
+
+
+
+
+##############################################################################
+################################################################################
 
 #Calculates the perplexity of model x,against the cleaned corpus y.  X shoudl indicate the maximum length of trigrams to use
 # perplexity <-function(y) {
@@ -512,71 +651,6 @@ accuracy<-function(n){
 #   
 #   }
 # 
-
-
-
-
-main<-function(resamp,path,num.sample, sz.sample, ng.size, coverage) {
-  
-  ## Summary Results are stored in the masterlsit file
-  # rm(GlobalEnv::unigrams);rm(trigrams);rm(bigrams);rm(results)
-              
-  Exec.time<-Sys.time()
-#If reusing a sample take passed in path
-  paths$tr.path <<- path
-#otherwise make a new sample    
-  if (resamp) paths<<-corpSample(num.sample,sz.sample)
-  
-  make.ngrams(path = paths$tr.path, min = 1, max = ng.size, num.sample, sz.sample)
-  
-  vocab<<-vocabulary(coverage)
-  
-
-  
-  repo<-repository("~/R/Capstone/")
-  
-  
-  ##read in current results table
-  ifelse (file.exists("~/R/Capstone/Results/masterlist.RDS"),
-          x<-readRDS("~/R/Capstone/Results/masterlist.RDS"),
-          x<-data.table(NULL))
-  
-  
-  new_results<-list(Time        = strftime(Exec.time, "%c"),
-                    Commit      = substr(branch_target(head(repo)),1,8),
-                    Notes       = commits(repo)[1][[1]],
-                    N           = paste(num.sample,"samples"), 
-                    Size        = paste0(sz.sample,"%"),
-                    DataPath    = paths$tr.path,
-                    Model.Size  = ng.size,
-                    Load.Time   = load.time,
-                    Sample.Time = samp.time,
-                    Ngram.Time  = ngram.time,
-                    N.unigrams  = unigrams[,.N],
-                    U.size      = paste0(round(object.size(unigrams)/10^6,2),"Mb"),
-                    N.bigrams   = bigrams[,.N],
-                    bi.size     = paste0(round(object.size(bigrams)/10^6,2),"Mb"),
-                    N.trigrams  = ifelse(exists("trigrams"),trigrams[,.N],0),
-                    tri.size    = ifelse(exists("trigrams"),paste0(round(object.size(trigrams)/10^6,2),"Mb"), "0Mb"),
-                    N.quadrigrams  = ifelse(exists("quadrigrams"),quadrigrams[,.N],0),
-                    quad.size    = ifelse(exists("quadrigrams"),paste0(round(object.size(quadrigrams)/10^6,2),"Mb"), "0Mb"),
-                    Coverage    = coverage
-                    #, Perplexity  =  perplexity(test.Corpus)
-                    )
-  
-  
-  
-
-  results<<- rbind(x,  data.table(t(new_results)),fill = TRUE)
-  
-  saveRDS(results,"~/R/Capstone/Results/masterlist.RDS")
-  
-  
-  
-  
-  }
-
-
 
 
 # 
