@@ -356,28 +356,40 @@ make.ngrams<-function(path,min.ng,max.ng,n,size){
   #BIGRAMS
   
   if (max.ng>1) {
-    
+  # Take bigrams from ngram and sum their count by bigram. Split bigram into two separate columns   
   bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(ngram)][, c("u", "v") := tstrsplit(ngram, " ", fixed = TRUE)]
   
-  bigrams<<- bigrams[!(u %in% c(unigrams[,ngram], tags)), ':='(u = "<UNK>",count = sum(count)), by = v][ v %in% unigrams[,ngram]]
+  #replace OOV words with <UNK> 
+  bigrams[!(u %in% unigrams[,ngram]), ':='(u = "<UNK>",count = sum(count)), by = v][!(v %in% unigrams[,ngram]), ':='(v = "<UNK>", count = sum(count)), by = u ]
+  
+  ##[ !(v %in% tags)]
   
   setkey(bigrams,u,v)
   
   bigrams<-unique(bigrams)
                   
-  bigrams[,':=' (pv_u = -log2(count/unigrams[bigrams$u,count])
-                 )]
+  bigrams[,':=' (pv_u = -log2(count/unigrams[bigrams$u,count]),
+                 ngram = NULL)]
+  
+  
   }
                 
                   
     
   #TRIGRAMS
   
-if (max.ng > 2) {trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w") := tstrsplit(ngram, " ", fixed = TRUE)][,uv:=paste0(u," ",v)]
+if (max.ng > 2) {
+   trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w") := tstrsplit(ngram, " ", fixed = TRUE)]
   
-                    setkey(trigrams,ngram)
+   #tag u and v not in the vocabualry with <UNK> 
+  trigrams[!(u %in% unigrams[,ngram]), ':='(u = "<UNK>"), ][ !(v %in% unigrams[,ngram]), v:="<UNK>"][,uv:=paste0(u," ",v)]
+   
+  #and remove trigrams which predict as unknown word
+  trigrams<<-trigrams[w %in% unigrams[ngram]]             
+  
+  setkey(trigrams,ngram)
                     
-                    trigrams[, pw_uv := -log2(count/ bigrams[trigrams$uv, count])]}
+  trigrams[, pw_uv := -log2(count/ bigrams[trigrams$uv, count])]}
                 
                     
 
