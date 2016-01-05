@@ -8,6 +8,8 @@ library("data.table", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1
 library("stringi", lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("plyr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
 library("git2r",      lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("hash", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+
 
 setwd("~/R/Capstone")
 
@@ -336,6 +338,7 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
   
   old_count<- unigrams[,sum(count)] 
   #unigrams<<-unigrams[!(ngram %in% tags),]  #remove tagged counts - we don't need to know probabilities of tags for  the moment
+  #????????????????????? should <n> and <p. have probability mass?  remove i below to give them mass
   unigrams<<-rbind(unigrams[!(ngram %in% tags),Mean.Probability := count/sum(count)][(ngram %in% tags),Mean.Probability := 0][order(-count),
                                                                    ':='(Cum.Probability  = cumsum(Mean.Probability),
                                                                    probability = -log2(Mean.Probability))][Cum.Probability<=(coverage/100),][order(ngram),],
@@ -359,19 +362,24 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
   # Take bigrams from ngram and sum their count by bigram. Split bigram into two separate columns   
   bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(ngram)][, c("u", "v") := tstrsplit(ngram, " ", fixed = TRUE)]
   
-  #replace OOV words with <UNK> 
-  bigrams[!(u %in% unigrams[,ngram]), ':='(u = "<UNK>",count = sum(count)), by = v][!(v %in% unigrams[,ngram]), ':='(v = "<UNK>", count = sum(count)), by = u ]
+
   
+  #replace OOV words in u with <UNK> and recalculate totals
+  bigrams[!(u %in% unigrams[,ngram]), ':='(u = "<UNK>",count = sum(count)), by = v]
+  setkey(bigrams,v)
+  bigrams<<-unique(bigrams)
+  
+  
+  bigrams[!(v %in% unigrams[,ngram]), ':='(v = "<UNK>", count = sum(count)), by = u ]
+  setkey(bigrams,u)
+  bigrams<<-unique(bigrams)
   ##[ !(v %in% tags)]
   
-  setkey(bigrams,u,v)
   
-  bigrams<<-unique(bigrams)
-                  
-  bigrams[,':=' (pv_u = -log2(count/unigrams[bigrams$u,count]),
-                 ngram = NULL)]
+  bigrams[,':=' (pv_u = -log2(count/unigrams[bigrams$u,count])
+                 )]
   
-  
+  setkey(bigrams,ngram)
   }
                 
                   
@@ -382,10 +390,37 @@ if (max.ng > 2) {
    trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w") := tstrsplit(ngram, " ", fixed = TRUE)]
   
    #tag u and v not in the vocabualry with <UNK> 
-  trigrams[!(u %in% unigrams[,ngram]), ':='(u = "<UNK>"), ][ !(v %in% unigrams[,ngram]), v:="<UNK>"][,uv:=paste0(u," ",v)]
-   
+ 
+   ##Sum <UNK> terms in u   
+    trigrams[!(u %in% unigrams[,ngram]),
+           ':='(u = "<UNK>",
+                count = sum(count)), by = .(v,w) ]
+  
+  setkey(trigrams, v , w)
+    trigrams<<- unique(trigrams)
+  
+    
+  ##Sum <UNK> terms in v  
+  trigrams[!(v %in% unigrams[,ngram]), 
+           ':='(v="<UNK>",
+            count = sum(count)),by = .(u,w)]
+  
+  setkey(trigrams, u , w)
+  trigrams<<- unique(trigrams)
+  
+  
+  
+  ##Sum <UNK> terms in w
+  trigrams[ !(w %in% unigrams[,ngram]),
+            ':='(w ="<UNK>",
+             count = sum(count)), by = .(v,w)][,uv:=paste0(u," ",v)]
+  
+  setkey(trigrams, u , v)
+  trigrams<<- unique(trigrams)
+  
+  
   #and remove trigrams which predict as unknown word
-  trigrams<<-trigrams[w %in% unigrams[,ngram]]             
+  #trigrams<<-trigrams[w %in% unigrams[,ngram]]             
   
   setkey(trigrams,ngram)
                     
