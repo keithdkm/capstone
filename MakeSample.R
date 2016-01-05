@@ -274,7 +274,7 @@ corpSample<-function(n,size)  {
 
 
 ##Divides table of ngrams into separate tables and calculates the frequency
-make.ngrams<-function(path,min.ng,max.ng,n,size){
+make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
 
    #Extracts count for each ngram from Term Document matrix
   extr_ngram_counts<-function(tdm) {
@@ -342,9 +342,9 @@ make.ngrams<-function(path,min.ng,max.ng,n,size){
                    
                    data.table(ngram       = "<UNK>", 
                               count       = old_count - unigrams[Cum.Probability<=(coverage/100),sum(count)],
-                              Mean.Probability = 0.05,
+                              Mean.Probability = (100-coverage)/100,
                               Cum.Probability  = 1,
-                              probability = -log2(0.05)),fill = T )
+                              probability = -log2((100-coverage)/100)),fill = T )
   
 
                    
@@ -366,7 +366,7 @@ make.ngrams<-function(path,min.ng,max.ng,n,size){
   
   setkey(bigrams,u,v)
   
-  bigrams<-unique(bigrams)
+  bigrams<<-unique(bigrams)
                   
   bigrams[,':=' (pv_u = -log2(count/unigrams[bigrams$u,count]),
                  ngram = NULL)]
@@ -385,11 +385,12 @@ if (max.ng > 2) {
   trigrams[!(u %in% unigrams[,ngram]), ':='(u = "<UNK>"), ][ !(v %in% unigrams[,ngram]), v:="<UNK>"][,uv:=paste0(u," ",v)]
    
   #and remove trigrams which predict as unknown word
-  trigrams<<-trigrams[w %in% unigrams[ngram]]             
+  trigrams<<-trigrams[w %in% unigrams[,ngram]]             
   
   setkey(trigrams,ngram)
                     
-  trigrams[, pw_uv := -log2(count/ bigrams[trigrams$uv, count])]}
+  trigrams[, pw_uv := -log2(count/ bigrams[trigrams$uv, count])]
+  }
                 
                     
 
@@ -447,12 +448,14 @@ vocabulary<-function(coverage){
 
 prune<-function(n){
 
-# remove words not in the vocabulary    
-if (n==4) quadrigrams<<- quadrigrams[x %in% vocab$ngram,]
-if (n==3) trigrams   <<-    trigrams[w %in% vocab$ngram,]
-if (n==2) bigrams    <<-    bigrams [v %in% vocab$ngram,]
+# remove predicted words not in the vocabulary    
+if (n==4) quadrigrams<<- quadrigrams[x %in% unigrams[,ngram]]
+if (n==3) trigrams   <<-    trigrams[w %in% unigrams[,ngram]]
+if (n==2) bigrams    <<-    bigrams [v %in% unigrams[,ngram]]
   
-  }
+######################   PRUNING IDEAS   #################
+ #Remove ngrams that have <UNK> unigrams and a low (1?) count 
+}
 
 
 # Predicts n possible next words from a phrase x 
