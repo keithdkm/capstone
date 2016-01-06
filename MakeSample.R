@@ -363,25 +363,17 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
   
   bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(ngram)][, c("u", "v") := tstrsplit(ngram, " ", fixed = TRUE)]
   
+  bigrams[,c("u","v") :=  lapply(.(u,v), function(x) ifelse (!(x %in% unigrams[,ngram]), "<UNK>", x))]
+  
+  bigrams[u=="<UNK>" | v=="<UNK>" ,count:=sum(count), by = .(u, v)]
+  
+  setkey(bigrams,u,v)
+  
+  bigrams<<-unique (bigrams)
+  
+  bigrams[, pv_u := -log2(count/ unigrams[bigrams$u, count])]
 
-  
-  #replace OOV words in u with <UNK> and recalculate totals
-  bigrams[!(u %in% unigrams[,ngram]), ':='(u = "<UNK>",count = sum(count)), by = v]
-  
   setkey(bigrams,u,v)
-  bigrams<<-unique(bigrams)
-  
-  
-  bigrams[!(v %in% unigrams[,ngram]), ':='(v = "<UNK>", count = sum(count)), by = u ]
-  setkey(bigrams,u,v)
-  bigrams<<-unique(bigrams)
-  ##[ !(v %in% tags)]
-  
-  
-  bigrams[,':=' (pv_u = -log2(count/unigrams[bigrams$u,count])
-                 )]
-  
-  setkey(bigrams,ngram)
   }
                 
                   
@@ -389,11 +381,11 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
   #TRIGRAMS
   
 if (max.ng > 2) {
-   trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w") := tstrsplit(ngram, " ", fixed = TRUE)][,uv:=paste0(u," ",v)]
+   trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w") := tstrsplit(ngram, " ", fixed = TRUE)]
   
    #tag u,  v and w not in the vocabualry with <UNK> 
  
-   trigrams[,c("u","v","w") :=  lapply(.(u,v,w), function(x) ifelse (!(x %in% unigrams[,ngram]), "<UNK>", x))]
+   trigrams[,c("u","v","w") :=  lapply(.(u,v,w), function(x) ifelse (!(x %in% unigrams[,ngram]), "<UNK>", x))][,uv:=paste0(u," ",v)]
    
    trigrams[u=="<UNK>" | v=="<UNK>" | w == "<UNK>",count:=sum(count), by = .(u, v, w)]
 
@@ -402,34 +394,34 @@ if (max.ng > 2) {
    trigrams<<-unique (trigrams)
   
   
-  trigrams[, pw_uv := -log2(count/ bigrams[trigrams$uv, count])]
+  trigrams[, pw_uv := -log2(count/ bigrams[.(trigrams$u,trigrams$v), count])]
   }
                 
-   setkey (trigrams,ngram)                 
+   setkey (trigrams,u,v,w)                 
 
   #QUADRIGRAMS
                 
   if (max.ng > 3) {
     
-    quadrigrams <<- ngramfreq[.(4), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w","x") := tstrsplit(ngram, " ", fixed = TRUE)][,uvw:=paste0(u," ",v," ",w)]
+    quadrigrams <<- ngramfreq[.(4), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w","x") := tstrsplit(ngram, " ", fixed = TRUE)]
   
-    quadrigrams[,c("u","v","w", "x") :=  lapply(.(u,v,w,x), function(x) ifelse (!(x %in% unigrams[,ngram]), "<UNK>", x))]
+    quadrigrams[,c("u","v","w", "x") :=  lapply(.(u,v,w,x), function(x) ifelse (!(x %in% unigrams[,ngram]), "<UNK>", x))][,uvw:=paste0(u," ",v," ",w)]
                     
     quadrigrams[u=="<UNK>" | v=="<UNK>" | w == "<UNK> "| x == "<UNK>",count:=sum(count), by = .(u, v, w, x)]
     
-    setkey(quadrigrams,u,v,w)
+    setkey(quadrigrams,u,v,w,x)
     
     quadrigrams<<-unique (quadrigrams)
     
     setkey(quadrigrams,ngram)
                     
-    quadrigrams[,pw_uvw := -log2(count/ trigrams[quadrigrams$uvw, count])]}
+    quadrigrams[,px_uvw := -log2(count/ trigrams[.(quadrigrams$u,quadrigrams$v,quadrigrams$w), count])]}
                   
                     # quadrigrams[,p4_wvu := log10(count)]
                     
   if (max.ng > 1)   setkey(bigrams,u)
-  if (max.ng > 2)   setkey(trigrams,uv)
-  if (max.ng > 3)   setkey(quadrigrams,uvw)
+  if (max.ng > 2)   setkey(trigrams,u,v)
+  if (max.ng > 3)   setkey(quadrigrams,u,v,w)
                 
   ngram.time<<-timetaken(started.at)
   
@@ -437,6 +429,7 @@ if (max.ng > 2) {
   
  #save the entire ngramfrq table for use in the Interim report 
   saveRDS(ngramfreq,"Results/Interim.RDS")
+  
   
   return (ngramfreq)
  
@@ -496,29 +489,30 @@ phrase <-  function(target,n,model) {
   if (model %in% c("Backoff")) {
         
   
-        
+        nomatch<- .(0,"<UNK>")
        #If phrase is longer than 3 words, discard all but the last 3
         
-        if (phrase.length>3){ target<-paste(stri_extract_all_words(target)[[1]][(phrase.length-2):phrase.length], collapse = " ")
-        phrase.length<-3}
+         target<-stri_extract_all_words(target)[[1]][(phrase.length-2):phrase.length];
+         
+         if (phrase.length>3){phrase.length<-3}
         
-        if (phrase.length == 3) 
-          y<-quadrigrams[target, .(x,pw_uvw)][order(pw_uvw)[1:n],x ]
         
-        if (is.na(y[1])) {target <- paste(stri_extract_all_words(target)[[1]][2:3], collapse = " ") ; phrase.length<-phrase.length-1; #print("Backing off to trigrams")
-        }
+        target<-data.table(u = target[1],v = target[2],w = target[3])
+#     
+        if (phrase.length == 3) y<-quadrigrams[target , .(x,px_uvw), nomatch = 0 ][order(px_uvw)[1:n],x ]
+    
+        if (sum(y[1:n] %in% nomatch) == n)   phrase.length<-phrase.length-1; #print("Backing off to trigrams")
         
-        if ( phrase.length  == 2) 
-          y<-trigrams[target , .(w,pw_uv)][order(pw_uv)[1:n], w]
+        
+        if ( phrase.length  == 2) y<-trigrams[.(target[2],target[3]) , .(w,pw_uv)][order(pw_uv)[1:n], w]
 
-        if (is.na(y[1])) {target <- paste(stri_extract_all_words(target)[[1]][2], collapse = " ") ; phrase.length<-phrase.length-1; #print("Backing off to bigrams")
-        }
+        if (sum(y[1:n] %in% nomatch) == n)  phrase.length<-phrase.length-1; #print("Backing off to bigrams")
         
-        if ( phrase.length  == 1) 
-         y<-bigrams[target, .(v,pv_u)][order(pv_u)[1:n],v]
+        
+        if ( phrase.length  == 1)  y<-bigrams[target[3], .(v,pv_u)][order(pv_u)[1:n],v]
        
-        if (is.na(y[1])) { phrase.length<-phrase.length-1; #print("Backing off to unigrams")
-        }
+        if (sum(y[1:n] %in% nomatch) == n)  phrase.length<-phrase.length-1; #print("Backing off to unigrams")
+        
         
         if (phrase.length == 0)
          y<-unigrams[order(probability),ngram ][1:n]
@@ -555,6 +549,8 @@ accuracy<-function(n){
   
     testlist<-stri_extract_all_words(test.samp)[[1]]
     testlength<-round((length(testlist)-3))
+    test.table<- data.table(u = testlist[1:testlength-2], v = testlist[2:testlength-1], w = testlist[3:testlength])
+    
     correct<-0
     
     started.at = proc.time()
