@@ -360,18 +360,20 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
   
   if (max.ng>1) {
   # Take bigrams from ngram and sum their count by bigram. Split bigram into two separate columns   
+  
   bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(ngram)][, c("u", "v") := tstrsplit(ngram, " ", fixed = TRUE)]
   
 
   
   #replace OOV words in u with <UNK> and recalculate totals
   bigrams[!(u %in% unigrams[,ngram]), ':='(u = "<UNK>",count = sum(count)), by = v]
-  setkey(bigrams,v)
+  
+  setkey(bigrams,u,v)
   bigrams<<-unique(bigrams)
   
   
   bigrams[!(v %in% unigrams[,ngram]), ':='(v = "<UNK>", count = sum(count)), by = u ]
-  setkey(bigrams,u)
+  setkey(bigrams,u,v)
   bigrams<<-unique(bigrams)
   ##[ !(v %in% tags)]
   
@@ -387,55 +389,41 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
   #TRIGRAMS
   
 if (max.ng > 2) {
-   trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w") := tstrsplit(ngram, " ", fixed = TRUE)]
+   trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w") := tstrsplit(ngram, " ", fixed = TRUE)][,uv:=paste0(u," ",v)]
   
-   #tag u and v not in the vocabualry with <UNK> 
+   #tag u,  v and w not in the vocabualry with <UNK> 
  
-   ##Sum <UNK> terms in u   
-    trigrams[!(u %in% unigrams[,ngram]),
-           ':='(u = "<UNK>",
-                count = sum(count)), by = .(v,w) ]
-  
-  setkey(trigrams, v , w)
-    trigrams<<- unique(trigrams)
-  
-    
-  ##Sum <UNK> terms in v  
-  trigrams[!(v %in% unigrams[,ngram]), 
-           ':='(v="<UNK>",
-            count = sum(count)),by = .(u,w)]
-  
-  setkey(trigrams, u , w)
-  trigrams<<- unique(trigrams)
+   trigrams[,c("u","v","w") :=  lapply(.(u,v,w), function(x) ifelse (!(x %in% unigrams[,ngram]), "<UNK>", x))]
+   
+   trigrams[u=="<UNK>" | v=="<UNK>" | w == "<UNK>",count:=sum(count), by = .(u, v, w)]
+
+   setkey(trigrams,u,v,w)
+   
+   trigrams<<-unique (trigrams)
   
   
-  
-  ##Sum <UNK> terms in w
-  trigrams[ !(w %in% unigrams[,ngram]),
-            ':='(w ="<UNK>",
-             count = sum(count)), by = .(v,w)][,uv:=paste0(u," ",v)]
-  
-  setkey(trigrams, u , v)
-  trigrams<<- unique(trigrams)
-  
-  
-  #and remove trigrams which predict as unknown word
-  #trigrams<<-trigrams[w %in% unigrams[,ngram]]             
-  
-  setkey(trigrams,ngram)
-                    
   trigrams[, pw_uv := -log2(count/ bigrams[trigrams$uv, count])]
   }
                 
-                    
+   setkey (trigrams,ngram)                 
 
   #QUADRIGRAMS
                 
-  if (max.ng > 3) {quadrigrams <<- ngramfreq[.(4), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w","x") := tstrsplit(ngram, " ", fixed = TRUE)][,uvw:=paste0(u," ",v," ",w)]
+  if (max.ng > 3) {
+    
+    quadrigrams <<- ngramfreq[.(4), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w","x") := tstrsplit(ngram, " ", fixed = TRUE)][,uvw:=paste0(u," ",v," ",w)]
   
-                    setkey(quadrigrams,ngram)
+    quadrigrams[,c("u","v","w", "x") :=  lapply(.(u,v,w,x), function(x) ifelse (!(x %in% unigrams[,ngram]), "<UNK>", x))]
                     
-                    quadrigrams[,pw_uvw := -log2(count/ trigrams[quadrigrams$uvw, count])]}
+    quadrigrams[u=="<UNK>" | v=="<UNK>" | w == "<UNK> "| x == "<UNK>",count:=sum(count), by = .(u, v, w, x)]
+    
+    setkey(quadrigrams,u,v,w)
+    
+    quadrigrams<<-unique (quadrigrams)
+    
+    setkey(quadrigrams,ngram)
+                    
+    quadrigrams[,pw_uvw := -log2(count/ trigrams[quadrigrams$uvw, count])]}
                   
                     # quadrigrams[,p4_wvu := log10(count)]
                     
