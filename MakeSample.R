@@ -558,7 +558,7 @@ accuracy<-function(n){
     started.at = proc.time()
     
     
-    test.table[,prediction := phrase(paste(u,v,w),1,"Backoff")]
+    test.table[,prediction := lapply ( paste(u,v,w),phrase,1,"Backoff")]
     
     }
   
