@@ -499,22 +499,22 @@ phrase <-  function(target,n,model) {
         
         target<-data.table(u = target[1],v = target[2],w = target[3])
 #     
-        if (phrase.length == 3) { y<-quadrigrams[target , .(x,px_uvw), nomatch = 0 ]
+        if ( phrase.length  == 3 ) { y<-quadrigrams[target , .(x,px_uvw), nomatch = 0 ]
         
                                   if (y[,.N]==0)   phrase.length<-phrase.length-1 #print("Backing off to trigrams")
                                   else y<-y[order(px_uvw)[1:n],x]}
         
-            else  if ( phrase.length  == 2) {y<-trigrams[target[,.(v,w)] , .(w,pw_uv)]
+        if ( phrase.length  == 2 ) {y<-trigrams[target[,.(v,w)] , .(w,pw_uv)]
 
                                   if (y[,.N]==0)  phrase.length<-phrase.length-1  #print("Backing off to bigrams")
                                   else y<-y[order(pw_uv)[1:n], w]}
         
-                        else if ( phrase.length  == 1) {y<-bigrams[target[,w], .(v,pv_u)]
+        if ( phrase.length  == 1 ) {y<-bigrams[target[,w], .(v,pv_u)]
        
-                                         if (y[,.N]==0)  phrase.length<-phrase.length-1  #print("Backing off to unigrams")
+                                  if (y[,.N]==0)  phrase.length<-phrase.length-1  #print("Backing off to unigrams")
                                            else y<-y[order(pv_u)[1:n],v]}
         
-                                  else if (phrase.length == 0) y<-unigrams[order(probability),ngram ][1:n]
+        if ( phrase.length == 0 ) y<-unigrams[order(probability),ngram ][1:n]
 
   }
   
