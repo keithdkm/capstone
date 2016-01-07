@@ -499,23 +499,22 @@ phrase <-  function(target,n,model) {
         
         target<-data.table(u = target[1],v = target[2],w = target[3])
 #     
-        if (phrase.length == 3) y<-quadrigrams[target , .(x,px_uvw), nomatch = 0 ][order(px_uvw)[1:n],x ]
-    
-        if (sum(y[1:n] %in% nomatch) == n)   phrase.length<-phrase.length-1; #print("Backing off to trigrams")
+        if (phrase.length == 3) { y<-quadrigrams[target , .(x,px_uvw), nomatch = 0 ]
         
+                                  if (y[,.N]==0)   phrase.length<-phrase.length-1 #print("Backing off to trigrams")
+                                  else y<-y[order(px_uvw)[1:n],x]}
         
-        if ( phrase.length  == 2) y<-trigrams[.(target[2],target[3]) , .(w,pw_uv)][order(pw_uv)[1:n], w]
+            else  if ( phrase.length  == 2) {y<-trigrams[target[,.(v,w)] , .(w,pw_uv)]
 
-        if (sum(y[1:n] %in% nomatch) == n)  phrase.length<-phrase.length-1; #print("Backing off to bigrams")
+                                  if (y[,.N]==0)  phrase.length<-phrase.length-1  #print("Backing off to bigrams")
+                                  else y<-y[order(pw_uv)[1:n], w]}
         
-        
-        if ( phrase.length  == 1)  y<-bigrams[target[3], .(v,pv_u)][order(pv_u)[1:n],v]
+                        else if ( phrase.length  == 1) {y<-bigrams[target[,w], .(v,pv_u)]
        
-        if (sum(y[1:n] %in% nomatch) == n)  phrase.length<-phrase.length-1; #print("Backing off to unigrams")
+                                         if (y[,.N]==0)  phrase.length<-phrase.length-1  #print("Backing off to unigrams")
+                                           else y<-y[order(pv_u)[1:n],v]}
         
-        
-        if (phrase.length == 0)
-         y<-unigrams[order(probability),ngram ][1:n]
+                                  else if (phrase.length == 0) y<-unigrams[order(probability),ngram ][1:n]
 
   }
   
@@ -549,7 +548,7 @@ accuracy<-function(n){
   
     testlist<-stri_extract_all_words(test.samp)[[1]]
     testlength<-round((length(testlist)-3))
-    test.table<- data.table(u = testlist[1:(testlength-3)], 
+    test.table<<- data.table(u = testlist[1:(testlength-3)], 
                             v = testlist[2:(testlength-2)], 
                             w = testlist[3:(testlength-1)],
                             x = testlist[4:(testlength)])
@@ -567,20 +566,20 @@ accuracy<-function(n){
     
     acc_time<-timetaken(started.at)
     
-    print(paste("Sample ",
-                i,
-                " ",
-                testlength, 
-                paste(round(count(actual_words==pred_words)[2,2]/testlength*100,2),"%",sep = ""), 
-                round(as.numeric(as.difftime(acc_time,  format="%H:%M:%S",units = "secs"))/testlength,2),
-                " seconds per prediction" ))
+#     print(paste("Sample ",
+#                 i,
+#                 " ",
+#                 testlength, 
+#                 paste(round(count(actual_words==pred_words)[2,2]/testlength*100,2),"%",sep = ""), 
+#                 round(as.numeric(as.difftime(acc_time,  format="%H:%M:%S",units = "secs"))/testlength,2),
+#                 " seconds per prediction" ))
     
-  }
+  
 
-   Correct <- (actual_words==pred_words)
-   acc_test_results<<-cbind(phrases,actual_words,pred_words, Correct)
+#    Correct <- (actual_words==pred_words)
+#    acc_test_results<<-cbind(phrases,actual_words,pred_words, Correct)
    
-   return (round(sum(Correct)[2,2]/nrow(acc_test_results)*100,1))
+   return (round(test.table[,sum(x == prediction,rm.na =T)/.N]*100,1))
 }
 
 
