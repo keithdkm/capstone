@@ -549,19 +549,17 @@ accuracy<-function(n){
   
     testlist<-stri_extract_all_words(test.samp)[[1]]
     testlength<-round((length(testlist)-3))
-    test.table<- data.table(u = testlist[1:testlength-2], v = testlist[2:testlength-1], w = testlist[3:testlength])
+    test.table<- data.table(u = testlist[1:(testlength-3)], 
+                            v = testlist[2:(testlength-2)], 
+                            w = testlist[3:(testlength-1)],
+                            x = testlist[4:(testlength)])
     
     correct<-0
     
     started.at = proc.time()
     
-    for (j in 1:testlength) {
-    new_phrase   <- paste(testlist[j:(j+2)],collapse = " ") 
-    new_pred     <- phrase(new_phrase,1,model = "Backoff")
-    new_actual   <- testlist[j+3]
-    phrases      <- c(phrases,new_phrase)
-    actual_words <- c(actual_words,new_actual)
-    pred_words   <- c(pred_words,new_pred)
+    
+    test.table[,prediction := phrase(paste(u,v,w),1,"Backoff")]
     
     }
   
@@ -582,7 +580,7 @@ accuracy<-function(n){
    Correct <- (actual_words==pred_words)
    acc_test_results<<-cbind(phrases,actual_words,pred_words, Correct)
    
-   return (round(count(Correct)[2,2]/nrow(acc_test_results)*100,1))
+   return (round(sum(Correct)[2,2]/nrow(acc_test_results)*100,1))
 }
 
 
