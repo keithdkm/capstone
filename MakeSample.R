@@ -341,7 +341,7 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
   #????????????????????? should <n> and <p. have probability mass?  remove i below to give them mass
   unigrams<<-rbind(unigrams[!(ngram %in% tags),Mean.Probability := count/sum(count)][(ngram %in% tags),Mean.Probability := 0][order(-count),
                                                                    ':='(Cum.Probability  = cumsum(Mean.Probability),
-                                                                   probability = -log2(Mean.Probability))][Cum.Probability<=(coverage/100),][order(ngram),],
+                                                                        probability      = -log2(Mean.Probability))][Cum.Probability<=(coverage/100),][order(ngram),],
                    
                    data.table(ngram       = "<UNK>", 
                               count       = old_count - unigrams[Cum.Probability<=(coverage/100),sum(count)],
