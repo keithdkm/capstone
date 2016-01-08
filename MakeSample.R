@@ -130,7 +130,7 @@ corpSample<-function(n,size)  {
     #replace all apostrophes with space '
     ## TEMPORARY replacing apostrohes with NULLS to treat contractions/possesives as unigrams
     # x<-tm_map(x, replacechars, '\'',              " \'") 
-    x<-tm_map(x, replacechars, '\'',              "") 
+    x<-tm_map(x, replacechars, '[\'’]',              "") 
     # writeLines("\n Replace apostrophes with space apostrophes so that tokenizer treats contractions as two words", con)
     writeLines("\n Replace apostrophes with NULL  so that tokenizer treats contractions as one words", con)
     
