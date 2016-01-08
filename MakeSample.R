@@ -492,13 +492,16 @@ phrase <-  function(target,n,model) {
         nomatch<- .(0,"<UNK>")
        #If phrase is longer than 3 words, discard all but the last 3
         
-         target<-stri_extract_all_words(target)[[1]][(phrase.length-2):phrase.length];
+         target<-data.table(t(stri_extract_all_words(target)[[1]][(phrase.length-2):phrase.length]));
+         
+         setnames(target, c("V1","V2", "V3"),c("u","v","w"))
          
          if (phrase.length>3){phrase.length<-3}
         
-        
-        target<-data.table(u = target[1],v = target[2],w = target[3])
-#     
+         target[,lapply(.SD, function(x) <- ifelse (x %in% unigrams$ngram), x , "<UNK>")]
+                 
+        # target<-data.table(u = target[1],v = target[2],w = target[3])
+     
         if ( phrase.length  == 3 ) { y<-quadrigrams[target , .(x,px_uvw), nomatch = 0 ]
         
                                   if (y[,.N]==0)   phrase.length<-phrase.length-1 #print("Backing off to trigrams")
