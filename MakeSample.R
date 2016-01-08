@@ -336,14 +336,16 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
                         .(count = sum(count)) , 
                         by = .(ngram)]
   
+  setnames(unigrams, "ngram", "x")
+  
   old_count<- unigrams[,sum(count)] 
   #unigrams<<-unigrams[!(ngram %in% tags),]  #remove tagged counts - we don't need to know probabilities of tags for  the moment
   #????????????????????? should <n> and <p. have probability mass?  remove i below to give them mass
-  unigrams<<-rbind(unigrams[!(ngram %in% tags),Mean.Probability := count/sum(count)][(ngram %in% tags),Mean.Probability := 0][order(-count),
+  unigrams<<-rbind(unigrams[!(x %in% tags),Mean.Probability := count/sum(count)][(x %in% tags),Mean.Probability := 0][order(-count),
                                                                    ':='(Cum.Probability  = cumsum(Mean.Probability),
-                                                                        probability      = -log2(Mean.Probability))][Cum.Probability<=(coverage/100),][order(ngram),],
+                                                                        probability      = -log2(Mean.Probability))][Cum.Probability<=(coverage/100),][order(x),],
                    
-                   data.table(ngram       = "<UNK>", 
+                   data.table(x       = "<UNK>", 
                               count       = old_count - unigrams[Cum.Probability<=(coverage/100),sum(count)],
                               Mean.Probability = (100-coverage)/100,
                               Cum.Probability  = 1,
@@ -354,26 +356,26 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
                    }
                  
         
-                setkey(unigrams,ngram)
+                setkey(unigrams,x)
 
   #BIGRAMS
   
   if (max.ng>1) {
   # Take bigrams from ngram and sum their count by bigram. Split bigram into two separate columns   
   
-  bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(ngram)][, c("u", "v") := tstrsplit(ngram, " ", fixed = TRUE)]
+  bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(ngram)][, c("w", "x") := tstrsplit(ngram, " ", fixed = TRUE)]
   
-  bigrams[,c("u","v") :=  lapply(.(u,v), function(x) ifelse (!(x %in% unigrams[,ngram]), "<UNK>", x))]
+  bigrams[,c("w","x") :=  lapply(.(w,x), function(x) ifelse ((x %in% unigrams[,x]), x, "<UNK>"))]
   
-  bigrams[u=="<UNK>" | v=="<UNK>" ,count:=sum(count), by = .(u, v)]
+  bigrams[w=="<UNK>" | x=="<UNK>" ,count:=sum(count), by = .(w, x)]
   
-  setkey(bigrams,u,v)
+  setkey(bigrams,w,x)
   
   bigrams<<-unique (bigrams)
   
-  bigrams[, pv_u := -log2(count/ unigrams[bigrams$u, count])]
+  bigrams[, probability := -log2(count/ unigrams[bigrams$w, count])]
 
-  setkey(bigrams,u,v)
+  setkey(bigrams,w,x)
   }
                 
                   
@@ -381,23 +383,23 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
   #TRIGRAMS
   
 if (max.ng > 2) {
-   trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w") := tstrsplit(ngram, " ", fixed = TRUE)]
+   trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngram)][, c("v","w","x") := tstrsplit(ngram, " ", fixed = TRUE)]
   
    #tag u,  v and w not in the vocabualry with <UNK> 
  
-   trigrams[,c("u","v","w") :=  lapply(.(u,v,w), function(x) ifelse (!(x %in% unigrams[,ngram]), "<UNK>", x))][,uv:=paste0(u," ",v)]
+   trigrams[,c("v","w","x") :=  lapply(.(v,w,x), function(x) ifelse (!(x %in% unigrams[,ngram]), "<UNK>", x))][,vw:=paste0(v," ",w)]
    
-   trigrams[u=="<UNK>" | v=="<UNK>" | w == "<UNK>",count:=sum(count), by = .(u, v, w)]
+   trigrams[ v=="<UNK>" | w == "<UNK>" | x=="<UNK>" ,count:=sum(count), by = .(v, w, x)]
 
-   setkey(trigrams,u,v,w)
+   setkey(trigrams,v,w,x)
    
    trigrams<<-unique (trigrams)
   
   
-  trigrams[, pw_uv := -log2(count/ bigrams[.(trigrams$u,trigrams$v), count])]
+  trigrams[, probability := -log2(count/ bigrams[.(trigrams$v,trigrams$w), count])]
   }
                 
-   setkey (trigrams,u,v,w)                 
+   setkey (trigrams,v,w,x)                 
 
   #QUADRIGRAMS
                 
@@ -415,7 +417,7 @@ if (max.ng > 2) {
     
     setkey(quadrigrams,ngram)
                     
-    quadrigrams[,px_uvw := -log2(count/ trigrams[.(quadrigrams$u,quadrigrams$v,quadrigrams$w), count])]}
+    quadrigrams[, probability := -log2(count/ trigrams[.(quadrigrams$u,quadrigrams$v,quadrigrams$w), count])]}
                   
                     # quadrigrams[,p4_wvu := log10(count)]
                     
@@ -484,21 +486,22 @@ phrase <-  function(target,n,model) {
   
   
   phrase.length <- stri_count_words(target) 
+ 
   
+  #If phrase is longer than 3 words, discard all but the last 3
+  
+  target<-data.table(t(stri_extract_all_words(target)[[1]][(phrase.length-2):phrase.length]));
+  
+  setnames(target, c("V1","V2", "V3"),c("u","v","w"))
+  
+  if (phrase.length>3) {phrase.length<-3}
+  
+  
+  # replace out of vocab words in target with <UNK> tag
+  target[,lapply(.SD , function(x) ifelse ((x %in% unigrams$ngram), x , "<UNK>"))]
   
   if (model %in% c("Backoff")) {
         
-  
-        nomatch<- .(0,"<UNK>")
-       #If phrase is longer than 3 words, discard all but the last 3
-        
-         target<-data.table(t(stri_extract_all_words(target)[[1]][(phrase.length-2):phrase.length]));
-         
-         setnames(target, c("V1","V2", "V3"),c("u","v","w"))
-         
-         if (phrase.length>3){phrase.length<-3}
-        
-         target[,lapply(.SD, function(x) <- ifelse (x %in% unigrams$ngram), x , "<UNK>")]
                  
         # target<-data.table(u = target[1],v = target[2],w = target[3])
      
@@ -522,6 +525,18 @@ phrase <-  function(target,n,model) {
   }
   
   else if (model=="Interpolate"){
+    
+  #create a table of probabilites of words based on for quadrigrams -> unigrams
+    table.predict<-  data.table(rbind(
+                                     quadrigrams[target[,.(u,v,w)], .(x,weighted.prob := l4* 2^-probability)][1:30], 
+                                     trigrams   [target[,.(  v,w)], .(x,weighted.prob := l3* 2^-probability)][1:30],
+                                     bigrams    [target[,.(    w)], .(x,weighted.prob := l2* 2^-probability)][1:30],
+                                     unigrams   [                 , .(x,weighted.prob := l1* 2^-probability)]))
+  
+  #sum the probabilities      
+  table.predict[, sum(weighted.prob), by = x][order(-weighted.prob)][1:n]
+  
+  y<-x
     
   }
   else print("Not a valid model")
