@@ -1,7 +1,7 @@
 ---
 title: "Capstone Notes"
 author: "Keith Miller"
-date: "Friday, July 10, 2015"
+date: "Friday, December 18th, 2015"
 output: html_document
 ---
 
@@ -168,8 +168,8 @@ Can you think of a way to increase the coverage -- identifying words that may no
 - Should we use stopwords ?  Which ones?  Stopwords are being left in as you want to both predict stopwords and use them for prediction
 - Do we need to use stemmed words?   No, words will be used as they are.
 - How do we break ties?
-- Use a hashing function for fast searching of Ngrams
-- Use RDS files for rapid file writing and reading.  
+- Use a hashing function for fast searching of Ngrams - doesn't seem to be necessary if using data tables
+- Use RDS files for rapid file writing and reading - done
 - Should lemmatization - probably not - loses context
 - Should we alter contractions,  probably as "it's"" and "it is"" should predict the same thing but we don't want to predict a contracted item.  However if we do that then we need to translate contractions before predicting.  Problem - what happens if there's two possible expansions.
 - Shoudl we predict paired capitalized words such as New York, El Paso Also possible that Capitalized words should be removed entirely.  May be removed by sparse filter from TDM
@@ -183,7 +183,7 @@ The goal here is to build your first simple model for the relationship between w
 ###Tasks to accomplish
 
 1. Build basic n-gram model - using the exploratory analysis you performed, build a basic n-gram model (http://en.wikipedia.org/wiki/N-gram) for predicting the next word based on the previous 1, 2, or 3 words.
-2. Build a model to handle unseen n-grams - in some cases people will want to type a combination of words that does not appear in the corpora. Build a model to handle cases where a particular n-gram isn't observed.
+2. Build a model to handle unseen n-grams - in some cases people will want to type a combination of words that does not appear in the corpora. Build a model to handle cases where a particular n-gram isn't observed.  
 
 ###Questions to consider
 
