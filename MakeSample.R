@@ -224,7 +224,7 @@ corpSample<-function(n,size)  {
   
   run_time <- gsub("[ :-]","_",as.character(Sys.time()))
   tr.path  <- paste0("Sample Data/",n,"_",size*100,"_",run_time)
-  test.path<-paste0("Test Data/",n,"_",size*100,"_",run_time)
+  test.path<- paste0("Test Data/"  ,n,"_",size*100,"_",run_time)
  
   dir.create(tr.path)
   dir.create(test.path)
@@ -329,7 +329,7 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
   
   # UNIGRAMS
   
-  tags<-c("<p>","<n>", "<s>","<e>")
+  tags<-c("<p>","<n>", "<s>","<e>", "<UNK>")
   
   if (max.ng>0) {
   unigrams<<- ngramfreq[.(1), 
@@ -365,7 +365,7 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
   
   bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(ngram)][, c("w", "x") := tstrsplit(ngram, " ", fixed = TRUE)]
   
-  bigrams[,c("w","x") :=  lapply(.(w,x), function(x) ifelse ((x %in% unigrams[,x]), x, "<UNK>"))]
+  bigrams[,c("w","x") :=  lapply(.(w,x), function(ngram) ifelse ((ngram %in% unigrams[,x]), ngram, "<UNK>"))]
   
   bigrams[w=="<UNK>" | x=="<UNK>" ,count:=sum(count), by = .(w, x)]
   
@@ -387,7 +387,7 @@ if (max.ng > 2) {
   
    #tag u,  v and w not in the vocabualry with <UNK> 
  
-   trigrams[,c("v","w","x") :=  lapply(.(v,w,x), function(x) ifelse (!(x %in% unigrams[,ngram]), "<UNK>", x))][,vw:=paste0(v," ",w)]
+   trigrams[,c("v","w","x") :=  lapply(.(v,w,x), function(ngram) ifelse (!(ngram %in% unigrams[,x]), "<UNK>", ngram))][,vw:=paste0(v," ",w)]
    
    trigrams[ v=="<UNK>" | w == "<UNK>" | x=="<UNK>" ,count:=sum(count), by = .(v, w, x)]
 
@@ -407,7 +407,7 @@ if (max.ng > 2) {
     
     quadrigrams <<- ngramfreq[.(4), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w","x") := tstrsplit(ngram, " ", fixed = TRUE)]
   
-    quadrigrams[,c("u","v","w", "x") :=  lapply(.(u,v,w,x), function(x) ifelse (!(x %in% unigrams[,ngram]), "<UNK>", x))][,uvw:=paste0(u," ",v," ",w)]
+    quadrigrams[,c("u","v","w", "x") :=  lapply(.(u,v,w,x), function(ngram) ifelse (!(ngram %in% unigrams[,x]), "<UNK>", ngram))][,uvw:=paste0(u," ",v," ",w)]
                     
     quadrigrams[u=="<UNK>" | v=="<UNK>" | w == "<UNK> "| x == "<UNK>",count:=sum(count), by = .(u, v, w, x)]
     
@@ -477,6 +477,7 @@ if (n==2) bigrams    <<-    bigrams [v %in% unigrams[,ngram]]
 phrase <-  function(target,n = 4,model = "Interpolate", l1 = 0.25, l2 = 0.25, l3 = 0.25, l4= 0.25) {
   
   y <- ""
+  tags<-c("<p>","<n>", "<s>","<e>", "<UNK>")
   
   #########!!!!!!!!!!!!!!   This needs to clean target rather than just lower casing it
   target<-tolower(target)
@@ -533,20 +534,20 @@ phrase <-  function(target,n = 4,model = "Interpolate", l1 = 0.25, l2 = 0.25, l3
     table.predict<-  data.table(rbind(
 
 
-                                     quadrigrams[target[,.(u,v,w)], weighted.prob := l4* 2^-probability]#[order(-weighted.prob), .(x, weighted.prob)][1:30]
+                                     quadrigrams[target[,.(u,v,w)], ][!(x %in% tags)][,weighted.prob := l4* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)]
                                      , 
-                                     trigrams   [target[,.(  v,w)], weighted.prob := l3* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:30]
+                                     trigrams   [target[,.(  v,w)], ][!(x %in% tags)][,weighted.prob := l3* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)]
                                      ,
-                                     bigrams    [target[,.(    w)], weighted.prob := l2* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:30]
+                                     bigrams    [target[,.(    w)], ][!(x %in% tags)][,weighted.prob := l2* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)]
                                      ,
-                                     unigrams   [                 , weighted.prob := l1* 2^-probability][order(-weighted.prob), .(x, weighted.prob)]))
+                                     unigrams   [ !(x %in% tags),                   ][,weighted.prob := l1* 2^-probability][order(-weighted.prob), .(x, weighted.prob)]))
 
 
   
   #sum the probabilities      
-  table.predict[, sum(weighted.prob), by = x][order(-weighted.prob)][1:n]
+  y<-table.predict[, sum(weighted.prob, rm.na = T), by = x][order(-V1), x][1:n]
   
-  y<-x
+  
     
   }
   
@@ -578,16 +579,16 @@ accuracy<-function(n){
     testlist<-stri_extract_all_words(test.samp)[[1]]
     testlength<-round((length(testlist)-3))
     test.table<<- data.table(u = testlist[1:(testlength-3)], 
-                            v = testlist[2:(testlength-2)], 
-                            w = testlist[3:(testlength-1)],
-                            x = testlist[4:(testlength)])
+                             v = testlist[2:(testlength-2)], 
+                             w = testlist[3:(testlength-1)],
+                             x = testlist[4:(testlength)])
     
     correct<-0
     
     started.at = proc.time()
     
     
-    test.table[,prediction := lapply ( paste(u,v,w),phrase,1,"Backoff")]
+    test.table[,prediction := lapply ( paste(u,v,w),phrase,1,"Interpolate")]
     
     }
   
