@@ -510,7 +510,9 @@ phrase <-  function(target,n = 4,model = "Interpolate", l1 = 0.25, l2 = 0.25, l3
         if ( phrase.length  == 2 ) {y<-    trigrams[target[,.(v,w)] , .(x,probability)]
 
 
+
                                   if (y[,.N]==0) phrase.length<-phrase.length-1 else y<-y[order(probability)[1:n], w]} #print("Backing off to bigrams")
+
 
                                   
         
@@ -518,6 +520,7 @@ phrase <-  function(target,n = 4,model = "Interpolate", l1 = 0.25, l2 = 0.25, l3
        
 
                                   if (y[,.N]==0) phrase.length<-phrase.length-1 else y<-y[order(probability)[1:n],v]} #print("Backing off to unigrams")
+
 
         
         if ( phrase.length  == 0 )  y<-    unigrams[order(probability),ngram ][1:n]
@@ -529,6 +532,7 @@ phrase <-  function(target,n = 4,model = "Interpolate", l1 = 0.25, l2 = 0.25, l3
   #create a table of probabilites of words based on for quadrigrams -> unigrams
     table.predict<-  data.table(rbind(
 
+
                                      quadrigrams[target[,.(u,v,w)], weighted.prob := l4* 2^-probability]#[order(-weighted.prob), .(x, weighted.prob)][1:30]
                                      , 
                                      trigrams   [target[,.(  v,w)], weighted.prob := l3* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:30]
@@ -536,6 +540,7 @@ phrase <-  function(target,n = 4,model = "Interpolate", l1 = 0.25, l2 = 0.25, l3
                                      bigrams    [target[,.(    w)], weighted.prob := l2* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:30]
                                      ,
                                      unigrams   [                 , weighted.prob := l1* 2^-probability][order(-weighted.prob), .(x, weighted.prob)]))
+
 
   
   #sum the probabilities      
