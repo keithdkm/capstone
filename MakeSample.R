@@ -175,9 +175,8 @@ corpSample<-function(n,size)  {
     
   }
   
-  
+  Print("SAMPLING AND CLEANING DATA")
 
-  
   started.at = proc.time()
   
   print(paste0("Loading Raw Data starting at ", Sys.time()))
@@ -278,6 +277,8 @@ corpSample<-function(n,size)  {
 ##Divides table of ngrams into separate tables and calculates the frequency
 make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
 
+  print( "GENERATING NGRAMS")
+  
    #Extracts count for each ngram from Term Document matrix
   extr_ngram_counts<-function(tdm) {
     
