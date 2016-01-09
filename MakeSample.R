@@ -474,7 +474,7 @@ if (n==2) bigrams    <<-    bigrams [v %in% unigrams[,ngram]]
 
 
 # Predicts n possible next words from a phrase x 
-phrase <-  function(target,n = 1,model = "Interpolate", l1 = 0.1, l2 = 0.5, l3 = 0.1, l4= 0.2) {
+phrase <-  function(target,n = 1,model = "Interpolate", l1 = 0.25, l2 = 0.25, l3 = 0.25, l4= 0.25) {
   2
   y <- ""
   tags<-c("<p>","<n>", "<s>","<e>", "<UNK>")
@@ -593,24 +593,25 @@ accuracy<-function(n = 100, model = "Interpolate"){
     
     acc_time<-timetaken(started.at)
     
-#     print(paste("Sample ",
-#                 i,
-#                 " ",
-#                 testlength, 
-#                 paste(round(count(actual_words==pred_words)[2,2]/testlength*100,2),"%",sep = ""), 
-#                 round(as.numeric(as.difftime(acc_time,  format="%H:%M:%S",units = "secs"))/testlength,2),
-#                 " seconds per prediction" ))
+    time.per.sample<-round(as.numeric(as.difftime(acc_time,  format="%H:%M:%S",units = "secs"))/n,2)
+    
+    acc<-paste0(round(test.table[,sum(x == prediction,rm.na =T)/n]*100,1),"%")
+    
+    print(paste(acc," accuracy in ",n," word sample in", time.per.sample,
+                " seconds per prediction" )
+                
+                )
     
   
 
 #    Correct <- (actual_words==pred_words)
 #    acc_test_results<<-cbind(phrases,actual_words,pred_words, Correct)
    
-   return (round(test.table[,sum(x == prediction,rm.na =T)/n]*100,1))
+   list( words = n, accuracy = acc, time.per.prediction = time.per.sample )
 }
 
 
-main<-function(resamp,path,num.sample, sz.sample, ng.size, coverage, model = "Interpolate") {
+main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.1, gengram = F,ng.size = 4, coverage = 95, model = "Interpolate") {
   
   ## Summary Results are stored in the masterlsit file
   # rm(GlobalEnv::unigrams);rm(trigrams);rm(bigrams);rm(results)
@@ -621,7 +622,7 @@ main<-function(resamp,path,num.sample, sz.sample, ng.size, coverage, model = "In
 #otherwise make a new sample    
   if (resamp) paths<<-corpSample(num.sample,sz.sample)
   
-  make.ngrams(path = paths$tr.path, min = 1, max = ng.size, num.sample, sz.sample,coverage)
+  if (gengram) make.ngrams(path = paths$tr.path, min = 1, max = ng.size, num.sample, sz.sample,coverage)
   
   
   repo<-repository("~/R/Capstone/")
@@ -632,27 +633,30 @@ main<-function(resamp,path,num.sample, sz.sample, ng.size, coverage, model = "In
           x<-readRDS("~/R/Capstone/Results/masterlist.RDS"),
           x<-data.table(NULL))
   
+  acc <-accuracy(1000)
   
-  new_results<-list(Time        = strftime(Exec.time, "%c"),
-                    Commit      = substr(branch_target(head(repo)),1,8),
-                    Notes       = commits(repo)[1][[1]],
-                    N           = paste(num.sample,"samples"), 
-                    Size        = paste0(sz.sample,"%"),
-                    DataPath    = paths$tr.path,
-                    Model.Size  = ng.size,
-                    Load.Time   = load.time,
-                    Sample.Time = samp.time,
-                    Ngram.Time  = ngram.time,
-                    N.unigrams  = unigrams[,.N],
-                    U.size      = paste0(round(object.size(unigrams)/10^6,2),"Mb"),
-                    N.bigrams   = bigrams[,.N],
-                    bi.size     = paste0(round(object.size(bigrams)/10^6,2),"Mb"),
-                    N.trigrams  = ifelse(exists("trigrams"),trigrams[,.N],0),
-                    tri.size    = ifelse(exists("trigrams"),paste0(round(object.size(trigrams)/10^6,2),"Mb"), "0Mb"),
+  new_results<-list(Time           = strftime(Exec.time, "%c"),
+                    Commit         = substr(branch_target(head(repo)),1,8),
+                    Notes          = commits(repo)[1][[1]],
+                    N              = paste(num.sample,"samples"), 
+                    Size           = paste0(sz.sample,"%"),
+                    DataPath       = paths$tr.path,
+                    Model.Size     = ng.size,
+                    Load.Time      = load.time,
+                    Sample.Time    = samp.time,
+                    Ngram.Time     = ngram.time,
+                    N.unigrams     = unigrams[,.N],
+                    U.size         = paste0(round(object.size(unigrams)/10^6,2),"Mb"),
+                    N.bigrams      = bigrams[,.N],
+                    bi.size        = paste0(round(object.size(bigrams)/10^6,2),"Mb"),
+                    N.trigrams     = ifelse(exists("trigrams"),trigrams[,.N],0),
+                    tri.size       = ifelse(exists("trigrams"),paste0(round(object.size(trigrams)/10^6,2),"Mb"), "0Mb"),
                     N.quadrigrams  = ifelse(exists("quadrigrams"),quadrigrams[,.N],0),
-                    quad.size    = ifelse(exists("quadrigrams"),paste0(round(object.size(quadrigrams)/10^6,2),"Mb"), "0Mb"),
-                    Coverage    = coverage,
-                    Accuracy    =  accuracy(1000, "Interpolate")
+                    quad.size      = ifelse(exists("quadrigrams"),paste0(round(object.size(quadrigrams)/10^6,2),"Mb"), "0Mb"),
+                    Coverage       =  coverage,
+                    Test.size       = acc$words,
+                    Accuracy       =  acc$accuracy,
+                    Performance    =  paste(acc$time.per.prediction,"secs per word")
                     #, Perplexity  =  perplexity(test.Corpus)
                     )
   
