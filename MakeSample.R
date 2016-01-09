@@ -474,8 +474,8 @@ if (n==2) bigrams    <<-    bigrams [v %in% unigrams[,ngram]]
 
 
 # Predicts n possible next words from a phrase x 
-phrase <-  function(target,n = 1,model = "Interpolate", l1 = 0.25, l2 = 0.25, l3 = 0.25, l4= 0.25) {
-  
+phrase <-  function(target,n = 1,model = "Interpolate", l1 = 0.1, l2 = 0.5, l3 = 0.1, l4= 0.2) {
+  2
   y <- ""
   tags<-c("<p>","<n>", "<s>","<e>", "<UNK>")
   
@@ -534,13 +534,10 @@ phrase <-  function(target,n = 1,model = "Interpolate", l1 = 0.25, l2 = 0.25, l3
     table.predict<-  data.table(rbind(
 
 
-                                     quadrigrams[target[,.(u,v,w)], ][!(x %in% tags)][,weighted.prob := l4* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)]
-                                     , 
-                                     trigrams   [target[,.(  v,w)], ][!(x %in% tags)][,weighted.prob := l3* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)]
-                                     ,
-                                     bigrams    [target[,.(    w)], ][!(x %in% tags)][,weighted.prob := l2* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)]
-                                     ,
-                                     unigrams   [ !(x %in% tags),                   ][,weighted.prob := l1* 2^-probability][order(-weighted.prob), .(x, weighted.prob)]))
+                                     quadrigrams[target[,.(u,v,w)], ][!(x %in% tags)][,weighted.prob := l4* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)],   
+                                     trigrams   [target[,.(  v,w)], ][!(x %in% tags)][,weighted.prob := l3* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)], 
+                                     bigrams    [target[,.(    w)], ][!(x %in% tags)][,weighted.prob := l2* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)], 
+                                     unigrams                        [!(x %in% tags)][,weighted.prob := l1* 2^-probability][order(-weighted.prob), .(x, weighted.prob)]))
 
 
   
@@ -556,7 +553,7 @@ phrase <-  function(target,n = 1,model = "Interpolate", l1 = 0.25, l2 = 0.25, l3
 
 
 #measures model accuracy against n test strings
-accuracy<-function(n, model){
+accuracy<-function(n = 100, model = "Interpolate"){
   
    path<-paths$test.path
   
@@ -566,7 +563,7 @@ accuracy<-function(n, model){
    
    
    
-  for (i in 1:n) {
+  for (i in 1:1) {
     
     file.name<-paste0(path,"/testsamp_",i,".RDS")
     
@@ -588,7 +585,7 @@ accuracy<-function(n, model){
     started.at = proc.time()
     
     
-    test.table[,prediction := lapply ( paste(u,v,w),phrase,1,model)]
+    test.table[1:n,prediction := lapply ( paste(u,v,w),phrase,1,model)]
     
     }
   
@@ -609,12 +606,8 @@ accuracy<-function(n, model){
 #    Correct <- (actual_words==pred_words)
 #    acc_test_results<<-cbind(phrases,actual_words,pred_words, Correct)
    
-   return (round(test.table[,sum(x == prediction,rm.na =T)/.N]*100,1))
+   return (round(test.table[,sum(x == prediction,rm.na =T)/n]*100,1))
 }
-
-
-
-
 
 
 main<-function(resamp,path,num.sample, sz.sample, ng.size, coverage, model = "Interpolate") {
@@ -659,7 +652,7 @@ main<-function(resamp,path,num.sample, sz.sample, ng.size, coverage, model = "In
                     N.quadrigrams  = ifelse(exists("quadrigrams"),quadrigrams[,.N],0),
                     quad.size    = ifelse(exists("quadrigrams"),paste0(round(object.size(quadrigrams)/10^6,2),"Mb"), "0Mb"),
                     Coverage    = coverage,
-                    Accuracy    =  accuracy(1)
+                    Accuracy    =  accuracy(1000, "Interpolate")
                     #, Perplexity  =  perplexity(test.Corpus)
                     )
   
@@ -676,7 +669,24 @@ main<-function(resamp,path,num.sample, sz.sample, ng.size, coverage, model = "In
   }
 
 
-
+save.ngrams<-function () {  path = paste0( "~/R/Capstone/ngrams/", gsub("[ :]", "_", x = Sys.time()))
+                            if (!dir.exists(path)) dir.create(path)
+                            saveRDS(object = unigrams,
+                                    file =  paste0(path,"/unigrams.RDS"))
+                            saveRDS(object = bigrams,
+                                    file =  paste0(path,"/bigrams.RDS"))
+                            saveRDS(object = trigrams,
+                                    file =  paste0(path,"/trigrams.RDS"))
+                            saveRDS(object = quadrigrams,
+                                    file =  paste0(path,"/quadrigrams.RDS"))}
+  
+restore.ngrams<-function (path) {  
+                            unigrams<<- readRDS(file =  paste0(path,"unigrams.RDS"))
+                            bigrams<<-  readRDS(file =  paste0(path,"bigrams.RDS"))
+                            trigrams<<- readRDS(file =  paste0(path,"trigrams.RDS"))
+                            quadrigrams<<- readRDS(file =  paste0(path,"quadrigrams.RDS"))
+                            
+                            }
 
 
 ##############################################################################
