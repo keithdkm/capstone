@@ -474,7 +474,7 @@ if (n==2) bigrams    <<-    bigrams [v %in% unigrams[,ngram]]
 
 
 # Predicts n possible next words from a phrase x 
-phrase <-  function(target,n = 4,model = "Interpolate", l1 = 0.25, l2 = 0.25, l3 = 0.25, l4= 0.25) {
+phrase <-  function(target,n = 1,model = "Interpolate", l1 = 0.25, l2 = 0.25, l3 = 0.25, l4= 0.25) {
   
   y <- ""
   tags<-c("<p>","<n>", "<s>","<e>", "<UNK>")
@@ -556,7 +556,7 @@ phrase <-  function(target,n = 4,model = "Interpolate", l1 = 0.25, l2 = 0.25, l3
 
 
 #measures model accuracy against n test strings
-accuracy<-function(n){
+accuracy<-function(n, model){
   
    path<-paths$test.path
   
@@ -576,7 +576,7 @@ accuracy<-function(n){
     
     print(paste("Measuring accuracy with Sample ", i, " at", Sys.time())) 
   
-    testlist<-stri_extract_all_words(test.samp)[[1]]
+    testlist<-stri_extract_all_words(test.samp[[1]]$content)[[1]]
     testlength<-round((length(testlist)-3))
     test.table<<- data.table(u = testlist[1:(testlength-3)], 
                              v = testlist[2:(testlength-2)], 
@@ -588,7 +588,7 @@ accuracy<-function(n){
     started.at = proc.time()
     
     
-    test.table[,prediction := lapply ( paste(u,v,w),phrase,1,"Interpolate")]
+    test.table[,prediction := lapply ( paste(u,v,w),phrase,1,model)]
     
     }
   
@@ -617,7 +617,7 @@ accuracy<-function(n){
 
 
 
-main<-function(resamp,path,num.sample, sz.sample, ng.size, coverage) {
+main<-function(resamp,path,num.sample, sz.sample, ng.size, coverage, model = "Interpolate") {
   
   ## Summary Results are stored in the masterlsit file
   # rm(GlobalEnv::unigrams);rm(trigrams);rm(bigrams);rm(results)
