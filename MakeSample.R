@@ -476,7 +476,7 @@ if (n==2) bigrams    <<-    bigrams [v %in% unigrams[,ngram]]
 
 
 # Predicts n possible next words from a phrase x 
-phrase <-  function(target,n = 1,model = "Interpolate", l1 = 0.25, l2 = 0.25, l3 = 0.25, l4= 0.25) {
+phrase <-  function(target,n = 1,model = "Interpolate", l1 = 0.2, l2 = 0.35, l3 = 0.45, l4= 0) {
   2
   y <- ""
   tags<-c("<p>","<n>", "<s>","<e>", "<UNK>")
@@ -498,7 +498,7 @@ phrase <-  function(target,n = 1,model = "Interpolate", l1 = 0.25, l2 = 0.25, l3
   
   
   # replace out of vocab words in target with <UNK> tag
-  target[,lapply(.SD , function(x) ifelse ((x %in% unigrams$ngram), x , "<UNK>"))]
+  target[,lapply(.SD , function(y) ifelse ((y %in% unigrams$x), y , "<UNK>"))]
   
   if (model %in% c("Backoff")) {
         
@@ -552,7 +552,6 @@ phrase <-  function(target,n = 1,model = "Interpolate", l1 = 0.25, l2 = 0.25, l3
   
   else print("Not a valid model")
    y}
-
 
 #measures model accuracy against n test strings
 accuracy<-function(n = 100, model = "Interpolate"){
@@ -611,7 +610,6 @@ accuracy<-function(n = 100, model = "Interpolate"){
    
    list( words = n, accuracy = acc, time.per.prediction = time.per.sample )
 }
-
 
 main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.1, gengram = F,ng.size = 4, coverage = 95, model = "Interpolate") {
   
