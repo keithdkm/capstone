@@ -476,7 +476,7 @@ if (n==2) bigrams    <<-    bigrams [v %in% unigrams[,ngram]]
 
 
 # Predicts n possible next words from a phrase x 
-phrase <-  function(target,n = 1,model = "Interpolate", l1 = 0.2, l2 = 0.35, l3 = 0.45, l4= 0) {
+phrase <-  function(target,n = 1,model = "Interpolate", params) {
   2
   y <- ""
   tags<-c("<p>","<n>", "<s>","<e>", "<UNK>")
@@ -536,10 +536,10 @@ phrase <-  function(target,n = 1,model = "Interpolate", l1 = 0.2, l2 = 0.35, l3 
     table.predict<-  data.table(rbind(
 
 
-                                     quadrigrams[target[,.(u,v,w)], ][!(x %in% tags)][,weighted.prob := l4* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)],   
-                                     trigrams   [target[,.(  v,w)], ][!(x %in% tags)][,weighted.prob := l3* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)], 
-                                     bigrams    [target[,.(    w)], ][!(x %in% tags)][,weighted.prob := l2* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)], 
-                                     unigrams                        [!(x %in% tags)][,weighted.prob := l1* 2^-probability][order(-weighted.prob), .(x, weighted.prob)]))
+                                     quadrigrams[target[,.(u,v,w)], ][!(x %in% tags)][,weighted.prob := params$l4* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)],   
+                                     trigrams   [target[,.(  v,w)], ][!(x %in% tags)][,weighted.prob := params$l3* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)], 
+                                     bigrams    [target[,.(    w)], ][!(x %in% tags)][,weighted.prob := params$l2* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)], 
+                                     unigrams                        [!(x %in% tags)][,weighted.prob := params$l1* 2^-probability][order(-weighted.prob), .(x, weighted.prob)]))
 
 
   
@@ -554,7 +554,7 @@ phrase <-  function(target,n = 1,model = "Interpolate", l1 = 0.2, l2 = 0.35, l3 
    y}
 
 #measures model accuracy against n test strings
-accuracy<-function(n = 100, model = "Interpolate"){
+accuracy<-function(n = 100, model = "Interpolate", params){
   
    path<-paths$test.path
   
@@ -586,7 +586,7 @@ accuracy<-function(n = 100, model = "Interpolate"){
     started.at = proc.time()
     
     
-    test.table[1:n,prediction := lapply ( paste(u,v,w),phrase,1,model)]
+    test.table[1:n,prediction := lapply ( paste(u,v,w),phrase,1,model, params)]
     
     }
   
@@ -598,7 +598,7 @@ accuracy<-function(n = 100, model = "Interpolate"){
     
     acc<-paste0(round(test.table[,sum(x == prediction,rm.na =T)/n]*100,1),"%")
     
-    print(paste(acc," accuracy in ",n," word sample in", time.per.sample,
+    print(paste("Parameters of " , paste(params), "yield",acc," accuracy in ",n," word sample in", time.per.sample,
                 " seconds per prediction" )
                 
                 )
@@ -611,7 +611,7 @@ accuracy<-function(n = 100, model = "Interpolate"){
    list( words = n, accuracy = acc, time.per.prediction = time.per.sample )
 }
 
-main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.1, gengram = F,ng.size = 4, coverage = 95, model = "Interpolate") {
+main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.1, gengram = F,ng.size = 4, coverage = 95, model = "Interpolate", params) {
   
   ## Summary Results are stored in the masterlsit file
   # rm(GlobalEnv::unigrams);rm(trigrams);rm(bigrams);rm(results)
@@ -633,11 +633,11 @@ main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.
           x<-readRDS("~/R/Capstone/Results/masterlist.RDS"),
           x<-data.table(NULL))
   
-  acc <-accuracy(1000)
+  acc <-accuracy(500, params = params)
   
   new_results<-list(Time           = strftime(Exec.time, "%c"),
                     Commit         = substr(branch_target(head(repo)),1,8),
-                    Notes          = commits(repo)[1][[1]],
+                    Notes          = commits(repo)[[1]]@message,
                     N              = paste(num.sample,"samples"), 
                     Size           = paste0(sz.sample,"%"),
                     DataPath       = paths$tr.path,
@@ -656,8 +656,8 @@ main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.
                     Coverage       =  coverage,
                     Test.size       = acc$words,
                     Accuracy       =  acc$accuracy,
-                    Performance    =  paste(acc$time.per.prediction,"secs per word")
-                    #, Perplexity  =  perplexity(test.Corpus)
+                    Performance    =  paste(acc$time.per.prediction,"secs per word"),
+                    Parameters     =  params
                     )
   
   
@@ -768,4 +768,25 @@ restore.ngrams<-function (path) {
 #   identical(a1, a2) # TRUE
 #   identical(a1, a3) # TRUE
 
+optimum<-function(){
+  
+  #create a datatable with all possible values of lambda
+  
+  possibles<-CJ( l1= seq(0,1,0.1), l2 = seq(0,1,0.1),l3 = seq(0,1,0.1), l4 = seq(0,1,0.1))
 
+  #filter rows so that only valid combinations are used
+  
+  possibles<-possibles[l1+l2+l3+l4 <=1,]
+
+  lapply(split(possibles,seq(possibles[,.N])), main, resamp = F,
+                              path =   "Sample Data/200_0.1_2016_01_09_14_07_15/",
+                              num.sample = 200,
+                              sz.sample = 0.1,
+                              gengram = F,
+                              ng.size = 4,
+                              coverage = 95,
+                              model = "Interpolate"
+                              )
+
+
+  }
