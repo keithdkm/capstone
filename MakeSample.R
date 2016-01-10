@@ -536,11 +536,11 @@ phrase <-  function(target,n = 1,model = "Interpolate", params) {
     table.predict<-  data.table(rbind(
 
 
-                                     quadrigrams[target[,.(u,v,w)], ][!(x %in% tags)][,weighted.prob := params$l4* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)],   
-                                     trigrams   [target[,.(  v,w)], ][!(x %in% tags)][,weighted.prob := params$l3* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)], 
-                                     bigrams    [target[,.(    w)], ][!(x %in% tags)][,weighted.prob := params$l2* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)], 
-                                     unigrams                        [!(x %in% tags)][,weighted.prob := params$l1* 2^-probability][order(-weighted.prob), .(x, weighted.prob)]))
-
+   quadrigrams[target[,.(u,v,w)], ][!(x %in% tags)][,weighted.prob := params$l4* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)],   
+   trigrams   [target[,.(  v,w)], ][!(x %in% tags)][,weighted.prob := params$l3* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)], 
+   bigrams    [target[,.(    w)], ][!(x %in% tags)][,weighted.prob := params$l2* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)], 
+   unigrams                        [!(x %in% tags)][,weighted.prob := params$l1* 2^-probability][order(-weighted.prob), .(x, weighted.prob)]))
+    
 
   
   #sum the probabilities      
@@ -596,10 +596,12 @@ accuracy<-function(n = 100, model = "Interpolate", params){
     
     time.per.sample<-round(as.numeric(as.difftime(acc_time,  format="%H:%M:%S",units = "secs"))/n,2)
     
-    acc<-paste0(round(test.table[,sum(x == prediction,rm.na =T)/n]*100,1),"%")
+    if(is.na(time.per.sample)) time.per.sample<-round(as.numeric(as.difftime(acc_time,  format="%S",units = "secs"))/n,2)
     
-    print(paste("Parameters of " , paste(params), "yield",acc," accuracy in ",n," word sample in", time.per.sample,
-                " seconds per prediction" )
+    acc<-round(test.table[,sum(x == prediction,rm.na =T)/n]*100,1)
+    
+    print(paste("Parameters of" , paste(params), "yield",acc,"% accuracy in",n," word sample in", time.per.sample,
+                "seconds per prediction" )
                 
                 )
     
@@ -768,15 +770,17 @@ restore.ngrams<-function (path) {
 #   identical(a1, a2) # TRUE
 #   identical(a1, a3) # TRUE
 
-optimum<-function(){
+optimum<-function(l1 = 0:1, l2 = 0:1, l3 = 0:1 ,l4 = 0:1) {
   
   #create a datatable with all possible values of lambda
   
-  possibles<-CJ( l1= seq(0,1,0.1), l2 = seq(0,1,0.1),l3 = seq(0,1,0.1), l4 = seq(0,1,0.1))
+  possibles<-CJ( l1= seq(l1[1],l1[2],0.05), l2 = seq(l2[1],l2[2],0.05),l3 = seq(l3[1],l3[2],0.05), l4 = seq(l4[1],l4[2],0.05))
 
   #filter rows so that only valid combinations are used
   
-  possibles<-possibles[l1+l2+l3+l4 <=1,]
+  possibles<-possibles[l1+l2+l3+l4 == 1,]
+  
+  if( possibles[,.N] > 0){print(paste (possibles[, .N], " lambda combinations being tested"))
 
   lapply(split(possibles,seq(possibles[,.N])), main, resamp = F,
                               path =   "Sample Data/200_0.1_2016_01_09_14_07_15/",
@@ -787,6 +791,6 @@ optimum<-function(){
                               coverage = 95,
                               model = "Interpolate"
                               )
-
+}
 
   }
