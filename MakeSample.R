@@ -276,7 +276,7 @@ corpSample<-function(n,size)  {
 
 
 ##Divides table of ngrams into separate tables and calculates the frequency
-make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
+make.ngrams<-function(path,min.ng,max.ng,n,size,coverage, unk = TRUE){
 
   print( "GENERATING NGRAMS")
   
@@ -334,10 +334,13 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
   tags<-c("<p>","<n>", "<s>","<e>", "<UNK>")
   
   if (max.ng>0) {
+  
   unigrams<<- ngramfreq[.(1), 
                         .(count = sum(count)) , 
                         by = .(ngram)]
-  
+  #save the entire ngramfrq table for use in the Interim report 
+  saveRDS(ngramfreq,"Results/Interim.RDS")
+ 
   setnames(unigrams, "ngram", "x")
   
   old_count<- unigrams[,sum(count)] 
@@ -365,11 +368,11 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
   if (max.ng>1) {
   # Take bigrams from ngram and sum their count by bigram. Split bigram into two separate columns   
   
-  bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(ngram)][, c("w", "x") := tstrsplit(ngram, " ", fixed = TRUE)]
+  bigrams <<- ngramfreq[.(2), .(count = sum(count)) , by = .(ngram)][, c("w", "x") := tstrsplit(ngram, " ", fixed = TRUE)][, ngram:=NULL]
   
-  bigrams[,c("w","x") :=  lapply(.(w,x), function(ngram) ifelse ((ngram %in% unigrams[,x]), ngram, "<UNK>"))]
+  if (unk) {bigrams[,c("w","x") :=  lapply(.(w,x), function(ngram) ifelse ((ngram %in% unigrams[,x]), ngram, "<UNK>"))]
   
-  bigrams[w=="<UNK>" | x=="<UNK>" ,count:=sum(count), by = .(w, x)]
+            bigrams[w=="<UNK>" | x=="<UNK>" ,count:=sum(count), by = .(w, x)]}
   
   setkey(bigrams,w,x)
   
@@ -385,13 +388,12 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage){
   #TRIGRAMS
   
 if (max.ng > 2) {
-   trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngram)][, c("v","w","x") := tstrsplit(ngram, " ", fixed = TRUE)]
-  
-   #tag u,  v and w not in the vocabualry with <UNK> 
- 
-   trigrams[,c("v","w","x") :=  lapply(.(v,w,x), function(ngram) ifelse (!(ngram %in% unigrams[,x]), "<UNK>", ngram))][,vw:=paste0(v," ",w)]
+   trigrams <<- ngramfreq[.(3), .(count = sum(count)) , by = .(ngram)][, c("v","w","x") := tstrsplit(ngram, " ", fixed = TRUE)][, ngram:=NULL]
    
-   trigrams[ v=="<UNK>" | w == "<UNK>" | x=="<UNK>" ,count:=sum(count), by = .(v, w, x)]
+   #tag u,  v and w not in the vocabualry with <UNK> 
+   if (unk) {trigrams[,c("v","w","x") :=  lapply(.(v,w,x), function(ngram) ifelse (!(ngram %in% unigrams[,x]), "<UNK>", ngram))]
+   
+             trigrams[ v=="<UNK>" | w == "<UNK>" | x=="<UNK>" ,count:=sum(count), by = .(v, w, x)]}
 
    setkey(trigrams,v,w,x)
    
@@ -407,23 +409,22 @@ if (max.ng > 2) {
                 
   if (max.ng > 3) {
     
-    quadrigrams <<- ngramfreq[.(4), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w","x") := tstrsplit(ngram, " ", fixed = TRUE)]
+    quadrigrams <<- ngramfreq[.(4), .(count = sum(count)) , by = .(ngram)][, c("u", "v","w","x") := tstrsplit(ngram, " ", fixed = TRUE)][, ngram:=NULL]
   
-    quadrigrams[,c("u","v","w", "x") :=  lapply(.(u,v,w,x), function(ngram) ifelse (!(ngram %in% unigrams[,x]), "<UNK>", ngram))][,uvw:=paste0(u," ",v," ",w)]
+    
+    if (unk) {quadrigrams[,c("u","v","w", "x") :=  lapply(.(u,v,w,x), function(ngram) ifelse (!(ngram %in% unigrams[,x]), "<UNK>", ngram))]
                     
-    quadrigrams[u=="<UNK>" | v=="<UNK>" | w == "<UNK> "| x == "<UNK>",count:=sum(count), by = .(u, v, w, x)]
+    quadrigrams[u=="<UNK>" | v=="<UNK>" | w == "<UNK> "| x == "<UNK>",count:=sum(count), by = .(u, v, w, x)]}
     
     setkey(quadrigrams,u,v,w,x)
     
     quadrigrams<<-unique (quadrigrams)
     
-    setkey(quadrigrams,ngram)
-                    
-    quadrigrams[, probability := -log2(count/ trigrams[.(quadrigrams$u,quadrigrams$v,quadrigrams$w), count])]
+    quadrigrams[, probability := as.integer(round(2^20*(count/ (trigrams[.(quadrigrams$u,quadrigrams$v,quadrigrams$w),count])),0))]
     }
                   
                     # quadrigrams[,p4_wvu := log10(count)]
-                    
+  if (max.ng > 0)   setkey(unigrams,probability) ;
   if (max.ng > 1)   setkey(bigrams,w)
   if (max.ng > 2)   setkey(trigrams,v,w)
   if (max.ng > 3)   setkey(quadrigrams,u,v,w)
@@ -432,11 +433,10 @@ if (max.ng > 2) {
   
   cat("Finished ",n,"samples in ",timetaken(started.at),"\n") 
   
- #save the entire ngramfrq table for use in the Interim report 
-  saveRDS(ngramfreq,"Results/Interim.RDS")
+ 
   
   
-  return (ngramfreq)
+ 
  
   
   
@@ -446,22 +446,22 @@ if (max.ng > 2) {
 
 ## examines unigram table and returns the lsit of words required to get the specified coverage
 
-vocabulary<-function(coverage){
-  
-  setorder(unigrams,-count)
-  old_count<-unigrams[,sum(count)]
-  
-  ##remove all unigrams that are in the least probable (100-coverage)% of unigrams and add an <UNK> unigram to replace unseen unigrams (OOV words)  
-  unigrams <<- rbind(unigrams[,Mean.Probability := count/sum(count)][,Cum.Probability:=cumsum(Mean.Probability)][Cum.Probability<=(coverage/100),][order(ngram),], 
-                     data.table(ngram = "<UNK>", count = total_count - unigrams[,sum(count)], probability = -log2(0.05)),fill = T )
-  
-  new_count<-unigrams[,sum(count)]
-  unigrams[ngram=="<UNK>", count:=old_count-new_count]
-  
+# vocabulary<-function(coverage){
+#   
+#   setorder(unigrams,-count)
+#   old_count<-unigrams[,sum(count)]
+#   
+#   ##remove all unigrams that are in the least probable (100-coverage)% of unigrams and add an <UNK> unigram to replace unseen unigrams (OOV words)  
+#   unigrams <<- rbind(unigrams[,Mean.Probability := count/sum(count)][,Cum.Probability:=cumsum(Mean.Probability)][Cum.Probability<=(coverage/100),][order(ngram),], 
+#                      data.table(ngram = "<UNK>", count = total_count - unigrams[,sum(count)], probability = -log2(0.05)),fill = T )
+#   
+#   new_count<-unigrams[,sum(count)]
+#   unigrams[ngram=="<UNK>", count:=old_count-new_count]
+#   
   
   # Remove additional probability columns
  ## unigrams[,c("Mean.Probability","Cum.Probability") := NULL]
-}
+# }
 
 
 prune<-function(n){
@@ -537,13 +537,14 @@ phrase <-  function(target,n = 1,model = "Interpolate", params) {
     table.predict<-  data.table(rbind(
 
 
-   quadrigrams[target[,.(u,v,w)], ][!(x %in% tags)][,weighted.prob := params$l4* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)],   
+   quadrigrams[target[,.(u,v,w)], ][!(x %in% tags)][,weighted.prob := params$l4* (probability/2^20)][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)],   
    trigrams   [target[,.(  v,w)], ][!(x %in% tags)][,weighted.prob := params$l3* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)], 
    bigrams    [target[,.(    w)], ][!(x %in% tags)][,weighted.prob := params$l2* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)], 
    unigrams                        [!(x %in% tags)][,weighted.prob := params$l1* 2^-probability][order(-weighted.prob), .(x, weighted.prob)]))
     
-
+   ngram.probs<<- data.table()
   
+   
   #sum the probabilities      
   y<-table.predict[, sum(weighted.prob, rm.na = T), by = x][order(-V1), x][1:n]
   
@@ -565,7 +566,7 @@ accuracy<-function(n = 100, model = "Interpolate", params){
    
    
    
-  for (i in 1:1) {
+  for (i in 2:3) {
     
     file.name<-paste0(path,"/testsamp_",i,".RDS")
     
@@ -589,7 +590,7 @@ accuracy<-function(n = 100, model = "Interpolate", params){
     
     test.table[1:n,prediction := lapply ( paste(u,v,w),phrase,1,model, params)]
     
-    }
+   
   
     
     
@@ -602,11 +603,9 @@ accuracy<-function(n = 100, model = "Interpolate", params){
     acc<-round(test.table[,sum(x == prediction,rm.na =T)/n]*100,1)
     
     print(paste("Parameters of" , paste(params), "yield",acc,"% accuracy in",n," word sample in", time.per.sample,
-                "seconds per prediction" )
-                
-                )
+                "seconds per prediction" ))
     
-  
+  }
 
 #    Correct <- (actual_words==pred_words)
 #    acc_test_results<<-cbind(phrases,actual_words,pred_words, Correct)
