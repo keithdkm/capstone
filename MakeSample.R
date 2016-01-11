@@ -29,7 +29,7 @@ load.data<-function(){
     
   }
   setwd("~/R/Capstone")
-  if (!exists("allblogs")) {
+  if (!exists("allblogs")) { 
     allblogs<<- iconv(readLines("Initial Dataset/final/en_US/en_US.blogs.txt",
                                 n       = -1,
                                 skipNul = TRUE, 
@@ -419,7 +419,8 @@ if (max.ng > 2) {
     
     setkey(quadrigrams,ngram)
                     
-    quadrigrams[, probability := -log2(count/ trigrams[.(quadrigrams$u,quadrigrams$v,quadrigrams$w), count])]}
+    quadrigrams[, probability := -log2(count/ trigrams[.(quadrigrams$u,quadrigrams$v,quadrigrams$w), count])]
+    }
                   
                     # quadrigrams[,p4_wvu := log10(count)]
                     
@@ -620,9 +621,9 @@ main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.
               
   Exec.time<-Sys.time()
 #If reusing a sample take passed in path
-  paths$tr.path <<- path
+  
 #otherwise make a new sample    
-  if (resamp) paths<<-corpSample(num.sample,sz.sample)
+  if (resamp) paths<<-corpSample(num.sample,sz.sample) else paths$tr.path <<- path
   
   if (gengram) make.ngrams(path = paths$tr.path, min = 1, max = ng.size, num.sample, sz.sample,coverage)
   
@@ -637,7 +638,8 @@ main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.
   
   acc <-accuracy(500, params = params)
   
-  new_results<-list(Time           = strftime(Exec.time, "%c"),
+  new_results<-list(Run.number     = run.number,
+                    Time           = strftime(Exec.time, "%c"),
                     Commit         = substr(branch_target(head(repo)),1,8),
                     Notes          = commits(repo)[[1]]@message,
                     N              = paste(num.sample,"samples"), 
@@ -663,7 +665,7 @@ main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.
                     )
   
   
-  
+  run.number<-run.number+1
 
   results<<- rbind(x,  data.table(t(new_results)),fill = TRUE)
   
