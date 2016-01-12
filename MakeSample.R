@@ -563,10 +563,11 @@ accuracy<-function(samp = 20, n = 500, model = "Interpolate", params){
    phrases<-""
    actual_words<-""
    pred_words<-""
-   
+   all.samp.accs<-NULL
+   all.samp.times<-NULL
    print(paste("Parameters of lambda1 =", params$l1,"lambda2 = ",params$l2,"lambda3 =",params$l3,"lambda4 = ",params$l4 ))
    
-  for (i in round(runif(samp,min = 1, max = 200))) {
+  for (i in round(sample(1:200,size = samp,replace = F))) {
     
     file.name<-paste0(path,"/testsamp_",i,".RDS")
     
@@ -601,13 +602,14 @@ accuracy<-function(samp = 20, n = 500, model = "Interpolate", params){
     acc<-round(test.table[,sum(x == prediction,rm.na =T)/n]*100,1)
     
     print (paste(acc,"% accuracy in",n,"word sample in", time.per.sample,"seconds per prediction" ))
-    
+    all.samp.accs<-c(all.samp.accs,acc)
+    all.samp.times <- c(all.samp.times,time.per.sample)
   }
 
 #    Correct <- (actual_words==pred_words)
 #    acc_test_results<<-cbind(phrases,actual_words,pred_words, Correct)
    
-   list( words = n, accuracy = acc, time.per.prediction = time.per.sample )
+   list( samples = samp,words = n, accuracy = mean(all.samp.accs),accuracysd = sd(all.samp.accs), time.per.prediction = mean(all.samp.times) )
 }
 
 main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.1, gengram = F,ng.size = 4, coverage = 95, model = "Interpolate", params) {
@@ -632,7 +634,7 @@ main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.
           x<-readRDS("~/R/Capstone/Results/masterlist.RDS"),
           x<-data.table(NULL))
   
-  acc <-accuracy(samp = 20, 500, params = params)
+  acc <-accuracy(samp = 50, 200, params = params)
   
   new_results<-list(Run.number     = run.number,
                     Time           = strftime(Exec.time, "%c"),
@@ -656,6 +658,7 @@ main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.
                     Coverage       =  coverage,
                     Test.size       = acc$words,
                     Accuracy       =  acc$accuracy,
+                    SD.Accuracy    =  acc$accuracysd,
                     Performance    =  paste(acc$time.per.prediction,"secs per word"),
                     Parameters     =  params
                     )
