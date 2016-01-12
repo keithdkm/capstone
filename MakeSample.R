@@ -534,13 +534,13 @@ phrase <-  function(target,n = 1,model = "Interpolate", params) {
   else if (model=="Interpolate"){
     
   #create a table of probabilites of words based on for quadrigrams -> unigrams
-    table.predict<-  data.table(rbind(
+    table.predict<<-  data.table(rbind(
 
 
-   quadrigrams[target[,.(u,v,w)], ][!(x %in% tags)][,weighted.prob := params$l4* (probability/2^20)][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)],   
-   trigrams   [target[,.(  v,w)], ][!(x %in% tags)][,weighted.prob := params$l3* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)], 
-   bigrams    [target[,.(    w)], ][!(x %in% tags)][,weighted.prob := params$l2* 2^-probability][order(-weighted.prob), .(x, weighted.prob)][1:min(.N,10)], 
-   unigrams                        [!(x %in% tags)][,weighted.prob := params$l1* 2^-probability][order(-weighted.prob), .(x, weighted.prob)]))
+   quadrigrams[target[,.(u,v,w)], ][!(x %in% tags)][,weighted.prob := params$l4* (probability/2^20)][order(-weighted.prob), .(x, weighted.prob,4)][1:min(.N,10)],   
+   trigrams   [target[,.(  v,w)], ][!(x %in% tags)][,weighted.prob := params$l3* 2^-probability][order(-weighted.prob), .(x, weighted.prob,3)][1:min(.N,10)], 
+   bigrams    [target[,.(    w)], ][!(x %in% tags)][,weighted.prob := params$l2* 2^-probability][order(-weighted.prob), .(x, weighted.prob,2)][1:min(.N,10)], 
+   unigrams   [1:100,]             [!(x %in% tags)][,weighted.prob := params$l1* 2^-probability][order(-weighted.prob), .(x, weighted.prob,1)]))
     
    ngram.probs<<- data.table()
   
@@ -556,7 +556,7 @@ phrase <-  function(target,n = 1,model = "Interpolate", params) {
    y}
 
 #measures model accuracy against n test strings
-accuracy<-function(n = 100, model = "Interpolate", params){
+accuracy<-function(samp = 20, n = 500, model = "Interpolate", params){
   
    path<-paths$test.path
   
@@ -564,9 +564,9 @@ accuracy<-function(n = 100, model = "Interpolate", params){
    actual_words<-""
    pred_words<-""
    
+   print(paste("Parameters of lambda1 =", params$l1,"lambda2 = ",params$l2,"lambda3 =",params$l3,"lambda4 = ",params$l4 ))
    
-   
-  for (i in 2:3) {
+  for (i in round(runif(samp,min = 1, max = 200))) {
     
     file.name<-paste0(path,"/testsamp_",i,".RDS")
     
@@ -590,9 +590,7 @@ accuracy<-function(n = 100, model = "Interpolate", params){
     
     test.table[1:n,prediction := lapply ( paste(u,v,w),phrase,1,model, params)]
     
-   
   
-    
     
     acc_time<-timetaken(started.at)
     
@@ -602,8 +600,7 @@ accuracy<-function(n = 100, model = "Interpolate", params){
     
     acc<-round(test.table[,sum(x == prediction,rm.na =T)/n]*100,1)
     
-    print(paste("Parameters of" , paste(params), "yield",acc,"% accuracy in",n," word sample in", time.per.sample,
-                "seconds per prediction" ))
+    print (paste(acc,"% accuracy in",n,"word sample in", time.per.sample,"seconds per prediction" ))
     
   }
 
@@ -635,7 +632,7 @@ main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.
           x<-readRDS("~/R/Capstone/Results/masterlist.RDS"),
           x<-data.table(NULL))
   
-  acc <-accuracy(500, params = params)
+  acc <-accuracy(samp = 20, 500, params = params)
   
   new_results<-list(Run.number     = run.number,
                     Time           = strftime(Exec.time, "%c"),
