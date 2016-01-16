@@ -1,14 +1,14 @@
 ##Required libraries
-library("caret", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("e1071", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("tm",    lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("caret", lib.loc="~/R/win-library/3.2")
+library("e1071", lib.loc="~/R/win-library/3.2")
+library("tm",    lib.loc="~/R/win-library/3.2")
 options( java.parameters = "-Xmx4g" )
-library("RWeka", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("data.table", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("stringi", lib.loc = "~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("plyr", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("git2r",      lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
-library("hash", lib.loc="~/R/Capstone/packrat/lib/x86_64-w64-mingw32/3.2.1")
+library("RWeka", lib.loc="~/R/win-library/3.2")
+library("data.table", lib.loc="~/R/win-library/3.2")
+library("stringi", lib.loc = "~/R/win-library/3.2")
+library("plyr", lib.loc="~/R/win-library/3.2")
+library("git2r",      lib.loc="~/R/win-library/3.2")
+library("hash", lib.loc="~/R/win-library/3.2")
 
 
 setwd("~/R/Capstone")
@@ -487,10 +487,13 @@ phrase <-  function(target,n = 1,model = "Interpolate", l1 = 0.2, l2 = 0.35, l3 
   
   phrase.length <- stri_count_words(target) 
  
+  if (phrase.length==1) target<-data.table(V1 = "", V2 = "", V3 = target) else 
+    if (phrase.length==2) target<-data.table(V1 = "", V2 = stri_extract_all_words(target)[[1]][1], V3 = stri_extract_all_words(target)[[1]][2]) else
+      target<-data.table(t(stri_extract_all_words(target)[[1]][(phrase.length-2):phrase.length]))
   
   #If phrase is longer than 3 words, discard all but the last 3
   
-  target<-data.table(t(stri_extract_all_words(target)[[1]][(phrase.length-2):phrase.length]));
+
   
   setnames(target, c("V1","V2", "V3"),c("u","v","w"))
   
@@ -673,7 +676,10 @@ main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.
   }
 
 
-save.ngrams<-function () {  path = paste0( "~/R/Capstone/ngrams/", gsub("[ :]", "_", x = Sys.time()))
+save.ngrams<-function (path = "~/R/Capstone/ngrams/") 
+  
+  {  if (path == "~/R/Capstone/ngrams/") path<- paste0(path, gsub("[ :]", "_", x = Sys.time())) 
+  
                             if (!dir.exists(path)) dir.create(path)
                             saveRDS(object = unigrams,
                                     file =  paste0(path,"/unigrams.RDS"))
