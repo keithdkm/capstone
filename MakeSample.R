@@ -434,7 +434,7 @@ if (max.ng > 2) {
   cat("Finished ",n,"samples in ",timetaken(started.at),"\n") 
   
  
-  
+  save.ngrams()
   
  
  
@@ -615,11 +615,11 @@ accuracy<-function(samp = 20, n = 500, model = "Interpolate", params){
    list( samples = samp,words = n, accuracy = mean(all.samp.accs),accuracysd = sd(all.samp.accs), time.per.prediction = mean(all.samp.times) )
 }
 
-main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.1, gengram = F,ng.size = 4, coverage = 95, model = "Interpolate", params) {
+main<-function(resamp = F,path = "",num.sample = 200, sz.sample = 0.1, gengram = F,ng.size = 4, coverage = 95, model = "Interpolate", params) {
   
   ## Summary Results are stored in the masterlsit file
   # rm(GlobalEnv::unigrams);rm(trigrams);rm(bigrams);rm(results)
-              
+  paths<<-list(tr.path = path, test.path = paste0("Test Data",stri_match(path,regex= "/.+/"))  )          
   Exec.time<-Sys.time()
 #If reusing a sample take passed in path
   
@@ -637,8 +637,11 @@ main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.
           x<-readRDS("~/R/Capstone/Results/masterlist.RDS"),
           x<-data.table(NULL))
   
-  acc <-accuracy(samp = 50, 200, params = params)
+  acc <-accuracy(samp = 2 , num.sample, params = params)
   
+  run.number<-x[,max(unlist(Run.number))]+1
+  
+
   new_results<-list(Run.number     = run.number,
                     Time           = strftime(Exec.time, "%c"),
                     Commit         = substr(branch_target(head(repo)),1,8),
@@ -647,9 +650,9 @@ main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.
                     Size           = paste0(sz.sample,"%"),
                     DataPath       = paths$tr.path,
                     Model.Size     = ng.size,
-                    Load.Time      = load.time,
-                    Sample.Time    = samp.time,
-                    Ngram.Time     = ngram.time,
+                    # Load.Time      = load.time,
+                    # Sample.Time    = samp.time,
+                    # Ngram.Time     = ngram.time,
                     N.unigrams     = unigrams[,.N],
                     U.size         = paste0(round(object.size(unigrams)/10^6,2),"Mb"),
                     N.bigrams      = bigrams[,.N],
@@ -667,7 +670,7 @@ main<-function(resamp = F,path = "Sample Data/",num.sample = 200, sz.sample = 0.
                     )
   
   
-  run.number<-run.number+1
+
 
   results<<- rbind(x,  data.table(t(new_results)),fill = TRUE)
   
