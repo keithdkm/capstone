@@ -20,11 +20,14 @@ ui <- fluidPage(
       
     ),
     mainPanel(     
-      fluidRow(column(12,offset =0, textInput("target", "What do you want to say?" )),
+      fluidRow(column(8,offset =0, textInput("target", "What do you want to say?" )),
+               actionButton(inputId = "reject", "Reject"),
                             
 #                     bsTooltip("target", "Start typing.  Press Enter to accept a prediction or start typing next word to reject it",
 #                               "right", options = list(container = "body"))
-                      bsPopover(id = "target",title ="", content = "Prediction", trigger = "manual")
+                        bsPopover(id = "target",title ="",
+                                  content = "To get a prediction, type a word and then type space and pause.  Hit Reject if the word is wrong", 
+                                  trigger = "hover")
 )
     )
    )
@@ -34,11 +37,20 @@ server <- function(input, output, session) {
   
   reac<-reactiveValues(predict = F, reset = F, enabled = isolate(input$enabled),  target = isolate(input$target))
   
+  predicted.last.word<-FALSE
   
   # observeEvent(input$reset, updateTextInput(session, "target", value = ""))
  
-  #if user types then set predict flag to false
-  
+ 
+  observe( label = "Reject last word",
+           x = { input$reject 
+                  updateTextInput(session, 
+                                                          "target",
+                                                          value = isolate(stri_trim_right(stri_sub(input$target,
+                                                                                   1,
+                                                                                   stri_locate_last_words(input$target)[1]-2))))
+                  
+                  })
   
  #Watch Clear Text button
    observe( label = "Clear text box",
@@ -51,7 +63,7 @@ server <- function(input, output, session) {
        input$target
        reac$predict<-FALSE} ) 
  # if user types and predict flag is set then copy to target phrase to reac$target to invalidate 
-   observe(   x = {  invalidateLater(1000,session)
+   observe(   x = {  invalidateLater(1050,session)
                      input$target
                      input$enabled
                      
@@ -65,7 +77,9 @@ server <- function(input, output, session) {
                        {reac$target<-input$target
                        reac$enabled <-input$enabled}
                      else isolate(reac$predict  <- TRUE)
- 
+                     
+                     predicted.last.word<-FALSE
+                     
                      },
           label = "Set Timer")
       
@@ -83,7 +97,8 @@ server <- function(input, output, session) {
                     
                          
                     updateTextInput(session, "target", value = x)
-                    # isolate(reac$target<-input$target)
+                    predicted.last.word<-TRUE
+              
                 
           })
   
