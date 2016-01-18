@@ -1,5 +1,6 @@
+
 ##Required libraries
-library("caret", lib.loc="~/R/win-library/3.2")
+# library("caret", lib.loc="~/R/win-library/3.2")
 library("e1071", lib.loc="~/R/win-library/3.2")
 library("tm",    lib.loc="~/R/win-library/3.2")
 options( java.parameters = "-Xmx4g" )
@@ -84,7 +85,14 @@ corpSample<-function(n,size)  {
                                                                          replacement,
                                                                          x, 
                                                                          ignore.case = TRUE) })
+    ######cleaning algorithm
+   ###Initialize
+     conf<-file("~/R/Capstone/Required Data/dirty.txt",'r')
+    profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")    #profanity<-readLines(conf)
+    close (conf)
     
+    
+     
     if(!dir.exists("Results")) dir.create("Results")
     
     
@@ -130,7 +138,7 @@ corpSample<-function(n,size)  {
     #replace all apostrophes with space '
     ## TEMPORARY replacing apostrohes with NULLS to treat contractions/possesives as unigrams
     # x<-tm_map(x, replacechars, '\'',              " \'") 
-    x<-tm_map(x, replacechars, '[\'’]',              "") 
+    x<-tm_map(x, replacechars, '[\'’]', "") 
     # writeLines("\n Replace apostrophes with space apostrophes so that tokenizer treats contractions as two words", con)
     writeLines("\n Replace apostrophes with NULL  so that tokenizer treats contractions as one words", con)
     
@@ -468,8 +476,8 @@ prune<-function(n){
 
 # remove predicted words not in the vocabulary    
 if (n==4) quadrigrams<<- quadrigrams[x %in% unigrams[,ngram]]
-if (n==3) trigrams   <<-    trigrams[w %in% unigrams[,ngram]]
-if (n==2) bigrams    <<-    bigrams [v %in% unigrams[,ngram]]
+if (n==3) trigrams   <<-    trigrams[x %in% unigrams[,ngram]]
+if (n==2) bigrams    <<-    bigrams [x %in% unigrams[,ngram]]
   
 ######################   PRUNING IDEAS   #################
  #Remove ngrams that have <UNK> unigrams and a low (1?) count 
@@ -478,12 +486,20 @@ if (n==2) bigrams    <<-    bigrams [v %in% unigrams[,ngram]]
 
 # Predicts n possible next words from a phrase x 
 phrase <-  function(target,n = 1,model = "Interpolate", params) {
-  2
+  
   y <- ""
   tags<-c("<p>","<n>", "<s>","<e>", "<UNK>")
   
-  #########!!!!!!!!!!!!!!   This needs to clean target rather than just lower casing it
-  target<-tolower(target)
+  
+  target<-gsub   ('[<>]+'           ," ",target) #remove tagging chars
+  target<-tolower(target) #set everything to lowercase
+  target<-gsub   (profanity         ," <P> ", target) #tag profanity
+  target<-gsub   ('((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   " <N> ",target) #tag numbers
+  target<-gsub   ('[\'’]'           , "" ,target)  #remove apostrophes
+  target<-gsub   ('[()\"“”:;,_-]'   , " ",target) #remove other characters
+  target<-gsub   ('[^a-zA-Z \n<>\']', " ",target) #remove anything that's not a letter
+  target<-gsub   ('[ ][ ]+'         , " ",target) #remove whitespace
+  
   
   
   phrase.length <- stri_count_words(target) 
