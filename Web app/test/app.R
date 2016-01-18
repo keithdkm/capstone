@@ -32,43 +32,60 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
-  reac<-reactiveValues(reset = F, predict = F,  target = isolate(input$target))
+  reac<-reactiveValues(predict = F, reset = F, enabled = isolate(input$enabled),  target = isolate(input$target))
+  
   
   # observeEvent(input$reset, updateTextInput(session, "target", value = ""))
  
   #if user types then set predict flag to false
-  observe( label = "Watch target",
-          x      =  {input$target
-                     reac$predict<-FALSE} )
   
-  observe( {input$reset
-           updateTextInput(session, "target", value = "") })
   
+ #Watch Clear Text button
+   observe( label = "Clear text box",
+            x = {input$reset
+                 updateTextInput(session, "target", value = "") })
+   observe(
+     label = "Watch target",
+     x      =  {
+       cat ("reset reac predict")
+       input$target
+       reac$predict<-FALSE} ) 
  # if user types and predict flag is set then copy to target phrase to reac$target to invalidate 
-   observe(   x = {
-                     invalidateLater(1500,session)
-                     isolate(reac$target<-input$target)
-                     # input$target
-#                     # input$reset
-#                      print(paste(system.time(), 
-#                           "reac$predict =",  isolate(reac$predict), 
-#                           "reac$target=",    isolate(reac$target),"\n"))
+   observe(   x = {  invalidateLater(1000,session)
+                     input$target
+                     input$enabled
+                     
+                     isolate(cat("Set timer: ", 
+                                 "input target:",input$target, 
+                                 "reac enabled:",reac$enabled, 
+                                 "reac target:",reac$target, 
+                                 "Predict:",reac$predict,"\n", sep =","))
       
-#                      # if (isolate(reac$predict)) reac$target<-input$target
-#                      # else isolate(reac$predict  <- TRUE) 
+                     if (isolate(reac$predict))
+                       {reac$target<-input$target
+                       reac$enabled <-input$enabled}
+                     else isolate(reac$predict  <- TRUE)
  
                      },
           label = "Set Timer")
       
-     
+   
+   
   observe(  label = "Make Prediction",  
     
-                x = {x<-if (stri_endswith(reac$target, fixed = " ")) paste0(reac$target, 
-                                                            if (input$enabled) phrase(reac$target,1, 
-                                                                                      "Interpolate")) else reac$target
+                x = { isolate(cat("Make Prediction", input$target, input$enabled, reac$target, reac$predict, "\n", sep =","))
+                  #make sure reac has the latest version of input before predicting
+                     x <- if ( stri_endswith(reac$target, fixed = " ")) 
+                            paste0(reac$target, if (reac$enabled) phrase(reac$target
+                                                                          ,1,
+                                                                          "Interpolate") 
+                                                else "") 
+                    
+                         
                     updateTextInput(session, "target", value = x)
-    
-  })
+                    # isolate(reac$target<-input$target)
+                
+          })
   
 }
 phrase <-  
