@@ -3,7 +3,7 @@
 # library("caret", lib.loc="~/R/win-library/3.2")
 library("e1071", lib.loc="~/R/win-library/3.2")
 library("tm",    lib.loc="~/R/win-library/3.2")
-options( java.parameters = "-Xmx4g" )
+ options( java.parameters = "-Xmx4g" )
 library("RWeka", lib.loc="~/R/win-library/3.2")
 library("data.table", lib.loc="~/R/win-library/3.2")
 library("stringi", lib.loc = "~/R/win-library/3.2")
@@ -88,10 +88,7 @@ corpSample<-function(n,size)  {
                                                                          ignore.case = TRUE) })
     ######cleaning algorithm
    ###Initialize
-     conf<-file("~/R/Capstone/Required Data/dirty.txt",'r')
-    profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")    #profanity<-readLines(conf)
-    close (conf)
-    
+
     
      
     if(!dir.exists("Results")) dir.create("Results")
@@ -117,7 +114,7 @@ corpSample<-function(n,size)  {
     
     
     # Tag any words appearing on Google's list of profane words  
-    conf<-file("~/R/Capstone/Required Data/dirty.txt",'r')
+    conf<-file("~/R/Capstone/Web app/test/data/dirty.txt",'r')
     profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")    #profanity<-readLines(conf)
     close(conf)
     x<-tm_map(x,tagwords, profanity,replacement = "<p>")

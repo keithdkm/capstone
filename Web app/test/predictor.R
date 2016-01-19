@@ -1,3 +1,7 @@
+conf<-file("Web app/test/data/dirty.txt",'r')
+profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")    #profanity<-readLines(conf)
+close (conf)
+
 
 phrase <-function(target,n = 1,model = "Interpolate", params) {
   
@@ -83,7 +87,7 @@ phrase <-function(target,n = 1,model = "Interpolate", params) {
     
     
     #sum the probabilities      
-    y<-table.predict[,.( prob = sum(weighted.prob)), by = x][order(-prob),.(ifelse (x=="i","I", x) , prob)][1:n]
+    y<-table.predict[,.( prob = sum(weighted.prob)), by = x][order(-prob),ifelse (x=="i","I", x) ][1:n]
     
     
     
