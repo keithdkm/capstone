@@ -1,7 +1,14 @@
-conf<-file("Web app/test/data/dirty.txt",'r')
+
+
+conf<-file("data/dirty.txt",'r')
 profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")    #profanity<-readLines(conf)
 close (conf)
-
+ 
+contr<-file("data/contractions",'r')  #load list of English contractions
+contractions <- data.table(read.csv(contr,F))
+close(contr)
+                           
+                                    
 
 phrase <-function(target,n = 1,model = "Interpolate", params) {
   
