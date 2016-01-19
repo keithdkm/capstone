@@ -119,8 +119,8 @@ corpSample<-function(n,size)  {
     conf<-file("~/R/Capstone/Required Data/dirty.txt",'r')
     profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")    #profanity<-readLines(conf)
     close(conf)
-    x<-tm_map(x,tagwords, profanity,replacement = " <P> ")
-    writeLines("\nReplace profanity with a <P> tag\n", con)
+    x<-tm_map(x,tagwords, profanity,replacement = "<p>")
+    writeLines("\nReplace profanity with a <p> tag\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
    
@@ -130,9 +130,9 @@ corpSample<-function(n,size)  {
       writeLines("\nRemove stop words\n", con)
       writeLines(substring(x[[1]]$content,1,12000),con)}
     
-    #replace numbers with <N> tags
-    x<-tm_map(x, replacechars, '((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   " <N> " )  
-    writeLines("\nTag Number with <N>", con)
+    #replace numbers with <n> tags
+    x<-tm_map(x, replacechars, '((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   "<n>" )  
+    writeLines("\nTag Number with <n>", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
     #replace all apostrophes with space '
@@ -485,7 +485,7 @@ if (n==2) bigrams    <<-    bigrams [x %in% unigrams[,ngram]]
 
 
 # Predicts n possible next words from a phrase x 
-phrase <-  function(target,n = 1,model = "Interpolate", params) {
+phrase <-function(target,n = 1,model = "Interpolate", params) {
   
   y <- ""
   tags<-c("<p>","<n>", "<s>","<e>", "<UNK>")
@@ -493,8 +493,8 @@ phrase <-  function(target,n = 1,model = "Interpolate", params) {
   
   target<-gsub   ('[<>]+'           ," ",target) #remove tagging chars
   target<-tolower(target) #set everything to lowercase
-  target<-gsub   (profanity         ," <P> ", target) #tag profanity
-  target<-gsub   ('((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   " <N> ",target) #tag numbers
+  target<-gsub   (profanity         ,"<p>", target) #tag profanity
+  target<-gsub   ('((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   "<n>",target) #tag numbers
   target<-gsub   ('[\'’]'           , "" ,target)  #remove apostrophes
   target<-gsub   ('[()\"“”:;,_-]'   , " ",target) #remove other characters
   target<-gsub   ('[^a-zA-Z \n<>\']', " ",target) #remove anything that's not a letter
@@ -504,8 +504,12 @@ phrase <-  function(target,n = 1,model = "Interpolate", params) {
   
   phrase.length <- stri_count_words(target) 
  
-  if (phrase.length==1) target<-data.table(V1 = "", V2 = "", V3 = target) else 
-    if (phrase.length==2) target<-data.table(V1 = "", V2 = stri_extract_all_words(target)[[1]][1], V3 = stri_extract_all_words(target)[[1]][2]) else
+  if (phrase.length==1) target<-data.table(V1 = "", 
+                                           V2 = "", 
+                                           V3 = target) else 
+    if (phrase.length==2) target<-data.table(V1 = "", 
+                                             V2 = stri_extract_all_words(target)[[1]][1], 
+                                             V3 = stri_extract_all_words(target)[[1]][2]) else
       target<-data.table(t(stri_extract_all_words(target)[[1]][(phrase.length-2):phrase.length]))
   
   #If phrase is longer than 3 words, discard all but the last 3
@@ -518,7 +522,7 @@ phrase <-  function(target,n = 1,model = "Interpolate", params) {
   
   
   # replace out of vocab words in target with <UNK> tag
-  target[,lapply(.SD , function(y) ifelse ((y %in% unigrams$x), y , "<UNK>"))]
+  target[,c("u","v","w"):=lapply(.SD , function(y) ifelse ((y %in% unigrams$x), y , "<UNK>"))]
   
   if (model %in% c("Backoff")) {
         
@@ -556,7 +560,7 @@ phrase <-  function(target,n = 1,model = "Interpolate", params) {
     table.predict<<-  data.table(rbind(
 
 
-   quadrigrams[target[,.(u,v,w)], ][!(x %in% tags)][,weighted.prob := params$l4* (probability/2^20)][order(-weighted.prob), .(x, weighted.prob,4)][1:min(.N,10)],   
+   quadrigrams[target[,.(u,v,w)], nomatch = 0][!(x %in% tags)][,weighted.prob := params$l4* (probability/2^20)][order(-weighted.prob), .(x, weighted.prob,4)][1:min(.N,10)],   
    trigrams   [target[,.(  v,w)], ][!(x %in% tags)][,weighted.prob := params$l3* 2^-probability][order(-weighted.prob), .(x, weighted.prob,3)][1:min(.N,10)], 
    bigrams    [target[,.(    w)], ][!(x %in% tags)][,weighted.prob := params$l2* 2^-probability][order(-weighted.prob), .(x, weighted.prob,2)][1:min(.N,10)], 
    unigrams   [1:100,]             [!(x %in% tags)][,weighted.prob := params$l1* 2^-probability][order(-weighted.prob), .(x, weighted.prob,1)]))
