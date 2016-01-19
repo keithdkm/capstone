@@ -1,5 +1,5 @@
 
-phrase <-function(target,n = 1,model = "Interpolate", params) {
+phrase <-function(target,n = 1,model = "Interpolate", params = list(l1 = 0.15, l2 = 0.2, l3 = 0.4, l4 = 0.25)) {
   
   y <- ""
   tags<-c("<p>","<n>", "<s>","<e>", "<UNK>")
@@ -36,7 +36,7 @@ phrase <-function(target,n = 1,model = "Interpolate", params) {
   
   
   # replace out of vocab words in target with <UNK> tag
-  target[,c("u","v","w"):=lapply(.SD , function(y) ifelse ((y %in% unigrams$x), y , "<UNK>"))]
+  target[,c("u","v","w"):=lapply(.SD , function(y) ifelse ((y %in% c(unigrams$x,"")), y , "<UNK>"))]
   
   if (model %in% c("Backoff")) {
     
@@ -83,7 +83,7 @@ phrase <-function(target,n = 1,model = "Interpolate", params) {
     
     
     #sum the probabilities      
-    y<-table.predict[,.( prob = sum(weighted.prob)), by = x][order(-prob),.(ifelse (x=="i","I", x) , prob)][1:n]
+    y<-table.predict[,.( prob = sum(weighted.prob)), by = x][order(-prob),ifelse (x=="i","I", x)][1:n]
     
     
     
