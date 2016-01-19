@@ -540,7 +540,7 @@ accuracy<-function(tests = 20, num.words = 500,num.sample, model = "Interpolate"
    list( samples = tests ,words = num.words, accuracy = mean(all.samp.accs),accuracysd = round(sd(all.samp.accs),2), time.per.prediction = mean(all.samp.times) )
 }
 
-main<-function(resamp = F,path = "",num.sample = 200, sz.sample = 0.1, gengram = F,ng.size = 4, coverage = 95, model = "Interpolate", params) {
+main<-function(resamp = F,path = "",num.sample = 200, sz.sample = 0.1, gengram = F,ng.size = 4, coverage = 95, model = "Interpolate", params = list(l1 = 0.15, l2 = 0.25, l3 = 0.5, l4 = 0.1)) {
   
   ## Summary Results are stored in the masterlsit file
   # rm(GlobalEnv::unigrams);rm(trigrams);rm(bigrams);rm(results)
