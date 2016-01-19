@@ -9,7 +9,9 @@ library("data.table", lib.loc="~/R/win-library/3.2")
 library("stringi", lib.loc = "~/R/win-library/3.2")
 library("plyr", lib.loc="~/R/win-library/3.2")
 library("git2r",      lib.loc="~/R/win-library/3.2")
-library("hash", lib.loc="~/R/win-library/3.2")
+#library("hash", lib.loc="~/R/win-library/3.2")
+library("xlsx", lib.loc="~/R/win-library/3.2")
+
 
 setwd("~/R/Capstone")
 source("Web app/test/predictor.R")
@@ -483,11 +485,9 @@ if (n==2) bigrams    <<-    bigrams [x %in% unigrams[,ngram]]
 }
 
 
-# Predicts n possible next words from a phrase x 
-
 
 #measures model accuracy against n test strings
-accuracy<-function(samp = 20, n = 500, model = "Interpolate", params){
+accuracy<-function(tests = 20, num.words = 500,num.sample, model = "Interpolate", params){
   
    path<-paths$test.path
   
@@ -498,7 +498,7 @@ accuracy<-function(samp = 20, n = 500, model = "Interpolate", params){
    all.samp.times<-NULL
    print(paste("Parameters of lambda1 =", params$l1,"lambda2 = ",params$l2,"lambda3 =",params$l3,"lambda4 = ",params$l4 ))
    
-  for (i in round(sample(1:200,size = samp,replace = F))) {
+  for (i in round(sample(1:num.sample,size = tests,replace = F))) {
     
     file.name<-paste0(path,"/testsamp_",i,".RDS")
     
@@ -520,19 +520,19 @@ accuracy<-function(samp = 20, n = 500, model = "Interpolate", params){
     started.at = proc.time()
     
     
-    test.table[1:n,prediction := lapply ( paste(u,v,w),phrase,1,model, params)]
+    test.table[1:num.words,prediction := lapply ( paste(u,v,w),phrase,1,model, params)]
     
   
     
     acc_time<-timetaken(started.at)
     
-    time.per.sample<-round(as.numeric(as.difftime(acc_time,  format="%H:%M:%S",units = "secs"))/n,2)
+    time.per.sample<-round(as.numeric(as.difftime(acc_time,  format="%H:%M:%S",units = "secs"))/num.words,2)
     
-    if(is.na(time.per.sample)) time.per.sample<-round(as.numeric(as.difftime(acc_time,  format="%S",units = "secs"))/n,2)
+    if(is.na(time.per.sample)) time.per.sample<-round(as.numeric(as.difftime(acc_time,  format="%S",units = "secs"))/num.words,2)
     
-    acc<-round(test.table[,sum(x == prediction,rm.na =T)/n]*100,1)
+    acc<-round(test.table[,sum(x == prediction,rm.na =T)/num.words]*100,1)
     
-    print (paste(acc,"% accuracy in",n,"word sample in", time.per.sample,"seconds per prediction" ))
+    print (paste(acc,"% accuracy in",num.words,"word sample in", time.per.sample,"seconds per prediction" ))
     all.samp.accs<-c(all.samp.accs,acc)
     all.samp.times <- c(all.samp.times,time.per.sample)
   }
@@ -540,7 +540,7 @@ accuracy<-function(samp = 20, n = 500, model = "Interpolate", params){
 #    Correct <- (actual_words==pred_words)
 #    acc_test_results<<-cbind(phrases,actual_words,pred_words, Correct)
    
-   list( samples = samp,words = n, accuracy = mean(all.samp.accs),accuracysd = sd(all.samp.accs), time.per.prediction = mean(all.samp.times) )
+   list( samples = tests ,words = num.words, accuracy = mean(all.samp.accs),accuracysd = round(sd(all.samp.accs),2), time.per.prediction = mean(all.samp.times) )
 }
 
 main<-function(resamp = F,path = "",num.sample = 200, sz.sample = 0.1, gengram = F,ng.size = 4, coverage = 95, model = "Interpolate", params) {
@@ -565,7 +565,7 @@ main<-function(resamp = F,path = "",num.sample = 200, sz.sample = 0.1, gengram =
           x<-readRDS("~/R/Capstone/Results/masterlist.RDS"),
           x<-data.table(NULL))
   
-  acc <-accuracy(samp = 2 , num.sample, params = params)
+  acc <-accuracy(tests = 5 , num.words =500 , num.sample,  params = params)
   
   run.number<-x[,max(unlist(Run.number))]+1
   
@@ -574,26 +574,26 @@ main<-function(resamp = F,path = "",num.sample = 200, sz.sample = 0.1, gengram =
                     Time           = strftime(Exec.time, "%c"),
                     Commit         = substr(branch_target(head(repo)),1,8),
                     Notes          = commits(repo)[[1]]@message,
-                    N              = paste(num.sample,"samples"), 
-                    Size           = paste0(sz.sample,"%"),
+                    N              = num.sample, 
+                    Size           = sz.sample,
                     DataPath       = paths$tr.path,
                     Model.Size     = ng.size,
                     # Load.Time      = load.time,
                     # Sample.Time    = samp.time,
                     # Ngram.Time     = ngram.time,
                     N.unigrams     = unigrams[,.N],
-                    U.size         = paste0(round(object.size(unigrams)/10^6,2),"Mb"),
+                    U.size         = round(object.size(unigrams)/10^6,2),
                     N.bigrams      = bigrams[,.N],
-                    bi.size        = paste0(round(object.size(bigrams)/10^6,2),"Mb"),
+                    bi.size        = round(object.size(bigrams)/10^6,2),
                     N.trigrams     = ifelse(exists("trigrams"),trigrams[,.N],0),
-                    tri.size       = ifelse(exists("trigrams"),paste0(round(object.size(trigrams)/10^6,2),"Mb"), "0Mb"),
+                    tri.size       = ifelse(exists("trigrams"),round(object.size(trigrams)/10^6,2),0),
                     N.quadrigrams  = ifelse(exists("quadrigrams"),quadrigrams[,.N],0),
-                    quad.size      = ifelse(exists("quadrigrams"),paste0(round(object.size(quadrigrams)/10^6,2),"Mb"), "0Mb"),
+                    quad.size      = ifelse(exists("quadrigrams"),round(object.size(quadrigrams)/10^6,2),0),
                     Coverage       =  coverage,
-                    Test.size       = acc$words,
+                    Test.size      =  acc$words,
                     Accuracy       =  acc$accuracy,
                     SD.Accuracy    =  acc$accuracysd,
-                    Performance    =  paste(acc$time.per.prediction,"secs per word"),
+                    Performance    =  acc$time.per.prediction,
                     Parameters     =  params
                     )
   
@@ -603,7 +603,7 @@ main<-function(resamp = F,path = "",num.sample = 200, sz.sample = 0.1, gengram =
   results<<- rbind(x,  data.table(t(new_results)),fill = TRUE)
   
   saveRDS(results,"~/R/Capstone/Results/masterlist.RDS")
-  
+  write.xlsx2(results,file = "Results/results.xlsx")
   
   
   
@@ -708,11 +708,11 @@ restore.ngrams<-function (path) {
 #   identical(a1, a2) # TRUE
 #   identical(a1, a3) # TRUE
 
-optimum<-function(l1 = 0:1, l2 = 0:1, l3 = 0:1 ,l4 = 0:1) {
+optimum<-function(lambda1 , lambda2, lambda3  ,lambda4 ) {
   
   #create a datatable with all possible values of lambda
   
-  possibles<-CJ( l1= seq(l1[1],l1[2],0.05), l2 = seq(l2[1],l2[2],0.05),l3 = seq(l3[1],l3[2],0.05), l4 = seq(l4[1],l4[2],0.05))
+  possibles<-CJ( l1= seq(lambda1[1],lambda1[2],0.05), l2 = seq(lambda2[1],lambda2[2],0.05),l3 = seq(lambda3[1],lambda3[2],0.05), l4 = seq(lambda4[1],lambda4[2],0.05))
 
   #filter rows so that only valid combinations are used
   
