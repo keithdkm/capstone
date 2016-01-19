@@ -1,5 +1,6 @@
+
 ##Required libraries
-library("caret", lib.loc="~/R/win-library/3.2")
+# library("caret", lib.loc="~/R/win-library/3.2")
 library("e1071", lib.loc="~/R/win-library/3.2")
 library("tm",    lib.loc="~/R/win-library/3.2")
 options( java.parameters = "-Xmx4g" )
@@ -12,9 +13,8 @@ library("git2r",      lib.loc="~/R/win-library/3.2")
 library("xlsx", lib.loc="~/R/win-library/3.2")
 
 
-
 setwd("~/R/Capstone")
-
+source("Web app/test/predictor.R")
 # Checks to see if original source files are loaded and loads them if required
 load.data<-function(){
   ### FILE INFO CALCUALTIONS
@@ -86,7 +86,14 @@ corpSample<-function(n,size)  {
                                                                          replacement,
                                                                          x, 
                                                                          ignore.case = TRUE) })
+    ######cleaning algorithm
+   ###Initialize
+     conf<-file("~/R/Capstone/Required Data/dirty.txt",'r')
+    profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")    #profanity<-readLines(conf)
+    close (conf)
     
+    
+     
     if(!dir.exists("Results")) dir.create("Results")
     
     
@@ -113,8 +120,8 @@ corpSample<-function(n,size)  {
     conf<-file("~/R/Capstone/Required Data/dirty.txt",'r')
     profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")    #profanity<-readLines(conf)
     close(conf)
-    x<-tm_map(x,tagwords, profanity,replacement = " <P> ")
-    writeLines("\nReplace profanity with a <P> tag\n", con)
+    x<-tm_map(x,tagwords, profanity,replacement = "<p>")
+    writeLines("\nReplace profanity with a <p> tag\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
    
@@ -124,15 +131,15 @@ corpSample<-function(n,size)  {
       writeLines("\nRemove stop words\n", con)
       writeLines(substring(x[[1]]$content,1,12000),con)}
     
-    #replace numbers with <N> tags
-    x<-tm_map(x, replacechars, '((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   " <N> " )  
-    writeLines("\nTag Number with <N>", con)
+    #replace numbers with <n> tags
+    x<-tm_map(x, replacechars, '((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   "<n>" )  
+    writeLines("\nTag Number with <n>", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
     #replace all apostrophes with space '
     ## TEMPORARY replacing apostrohes with NULLS to treat contractions/possesives as unigrams
     # x<-tm_map(x, replacechars, '\'',              " \'") 
-    x<-tm_map(x, replacechars, '[\'’]',              "") 
+    x<-tm_map(x, replacechars, '[\'’]', "") 
     # writeLines("\n Replace apostrophes with space apostrophes so that tokenizer treats contractions as two words", con)
     writeLines("\n Replace apostrophes with NULL  so that tokenizer treats contractions as one words", con)
     
@@ -470,95 +477,14 @@ prune<-function(n){
 
 # remove predicted words not in the vocabulary    
 if (n==4) quadrigrams<<- quadrigrams[x %in% unigrams[,ngram]]
-if (n==3) trigrams   <<-    trigrams[w %in% unigrams[,ngram]]
-if (n==2) bigrams    <<-    bigrams [v %in% unigrams[,ngram]]
+if (n==3) trigrams   <<-    trigrams[x %in% unigrams[,ngram]]
+if (n==2) bigrams    <<-    bigrams [x %in% unigrams[,ngram]]
   
 ######################   PRUNING IDEAS   #################
  #Remove ngrams that have <UNK> unigrams and a low (1?) count 
 }
 
 
-# Predicts n possible next words from a phrase x 
-phrase <-  function(target,n = 1,model = "Interpolate", params) {
-  2
-  y <- ""
-  tags<-c("<p>","<n>", "<s>","<e>", "<UNK>")
-  
-  #########!!!!!!!!!!!!!!   This needs to clean target rather than just lower casing it
-  target<-tolower(target)
-  
-  
-  phrase.length <- stri_count_words(target) 
- 
-  if (phrase.length==1) target<-data.table(V1 = "", V2 = "", V3 = target) else 
-    if (phrase.length==2) target<-data.table(V1 = "", V2 = stri_extract_all_words(target)[[1]][1], V3 = stri_extract_all_words(target)[[1]][2]) else
-      target<-data.table(t(stri_extract_all_words(target)[[1]][(phrase.length-2):phrase.length]))
-  
-  #If phrase is longer than 3 words, discard all but the last 3
-  
-
-  
-  setnames(target, c("V1","V2", "V3"),c("u","v","w"))
-  
-  if (phrase.length>3) {phrase.length<-3}
-  
-  
-  # replace out of vocab words in target with <UNK> tag
-  target[,lapply(.SD , function(y) ifelse ((y %in% unigrams$x), y , "<UNK>"))]
-  
-  if (model %in% c("Backoff")) {
-        
-                 
-        # target<-data.table(u = target[1],v = target[2],w = target[3])
-     
-        if ( phrase.length  == 3 ) { y<-quadrigrams[target , .(x,probability), nomatch = 0 ]
-        
-                                  if (y[,.N]==0) phrase.length<-phrase.length-1 else y<-y[order(probability)[1:n],x]}#print("Backing off to trigrams")
-                                  
-        
-        if ( phrase.length  == 2 ) {y<-    trigrams[target[,.(v,w)] , .(x,probability)]
-
-
-
-                                  if (y[,.N]==0) phrase.length<-phrase.length-1 else y<-y[order(probability)[1:n], w]} #print("Backing off to bigrams")
-
-
-                                  
-        
-        if ( phrase.length  == 1 ) {y<-     bigrams[target[,w], .(x,probability)]
-       
-
-                                  if (y[,.N]==0) phrase.length<-phrase.length-1 else y<-y[order(probability)[1:n],v]} #print("Backing off to unigrams")
-
-
-        
-        if ( phrase.length  == 0 )  y<-    unigrams[order(probability),ngram ][1:n]
-
-  }
-  
-  else if (model=="Interpolate"){
-    
-  #create a table of probabilites of words based on for quadrigrams -> unigrams
-    table.predict<<-  data.table(rbind(
-
-
-   quadrigrams[target[,.(u,v,w)], ][!(x %in% tags)][,weighted.prob := params$l4* (probability/2^20)][order(-weighted.prob), .(x, weighted.prob,4)][1:min(.N,10)],   
-   trigrams   [target[,.(  v,w)], ][!(x %in% tags)][,weighted.prob := params$l3* 2^-probability][order(-weighted.prob), .(x, weighted.prob,3)][1:min(.N,10)], 
-   bigrams    [target[,.(    w)], ][!(x %in% tags)][,weighted.prob := params$l2* 2^-probability][order(-weighted.prob), .(x, weighted.prob,2)][1:min(.N,10)], 
-   unigrams   [1:100,]             [!(x %in% tags)][,weighted.prob := params$l1* 2^-probability][order(-weighted.prob), .(x, weighted.prob,1)]))
-    
-   ngram.probs<<- data.table()
-  
-   
-  #sum the probabilities      
-  y<-table.predict[, sum(weighted.prob, rm.na = T), by = x][order(-V1), x][1:n]
-  
-  
-    
-  }
-  
-  else print("Not a valid model")
-   y } #returns a vector of n predictions}
 
 #measures model accuracy against n test strings
 accuracy<-function(tests = 20, num.words = 500,num.sample, model = "Interpolate", params){
