@@ -562,7 +562,7 @@ main<-function(resamp = F,path = "",num.sample = 200, sz.sample = 0.1, gengram =
           x<-readRDS("~/R/Capstone/Results/masterlist.RDS"),
           x<-data.table(NULL))
   
-  acc <-accuracy(tests = 5 , num.words =500 , num.sample,  params = params)
+  acc <-accuracy(tests = 5 , num.words =200 , num.sample,  params = params)
   
   run.number<-x[,max(unlist(Run.number))]+1
   
@@ -705,11 +705,11 @@ restore.ngrams<-function (path) {
 #   identical(a1, a2) # TRUE
 #   identical(a1, a3) # TRUE
 
-optimum<-function(lambda1 , lambda2, lambda3  ,lambda4 ) {
+optimum<-function(lambda1 , lambda2, lambda3  ,lambda4,step = 0.1 ) {
   
   #create a datatable with all possible values of lambda
   
-  possibles<-CJ( l1= seq(lambda1[1],lambda1[2],0.05), l2 = seq(lambda2[1],lambda2[2],0.05),l3 = seq(lambda3[1],lambda3[2],0.05), l4 = seq(lambda4[1],lambda4[2],0.05))
+  possibles<-CJ( l1= seq(lambda1[1],lambda1[2],step), l2 = seq(lambda2[1],lambda2[2],step),l3 = seq(lambda3[1],lambda3[2],step), l4 = seq(lambda4[1],lambda4[2],step))
 
   #filter rows so that only valid combinations are used
   
@@ -718,9 +718,9 @@ optimum<-function(lambda1 , lambda2, lambda3  ,lambda4 ) {
   if( possibles[,.N] > 0){print(paste (possibles[, .N], " lambda combinations being tested"))
 
   lapply(split(possibles,seq(possibles[,.N])), main, resamp = F,
-                              path =   "Sample Data/200_0.1_2016_01_09_14_07_15/",
-                              num.sample = 200,
-                              sz.sample = 0.1,
+                              path =   "Sample Data/250_0.1_2016_01_03_01_02_11/",
+                              num.sample = 240,
+                              sz.sample = 0.2,
                               gengram = F,
                               ng.size = 4,
                               coverage = 95,
