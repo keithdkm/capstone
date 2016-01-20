@@ -87,9 +87,9 @@ phrase <-function(target,n = 1,model = "Interpolate", params = list(l1 = 0.15, l
       
       
       quadrigrams[target[,.(u,v,w)], nomatch = 0 ][!(x %in% tags)][,weighted.prob := params$l4* (probability/2^20)][order(-weighted.prob), .(x, weighted.prob,4)][1:min(.N,10)],   
-      trigrams   [target[,.(  v,w)], ][!(x %in% tags)][,weighted.prob := params$l3* 2^-probability][order(-weighted.prob), .(x, weighted.prob,3)][1:min(.N,10)], 
-      bigrams    [target[,.(    w)], ][!(x %in% tags)][,weighted.prob := params$l2* 2^-probability][order(-weighted.prob), .(x, weighted.prob,2)][1:min(.N,10)], 
-      unigrams   [1:100,]             [!(x %in% tags)][,weighted.prob := params$l1* 2^-probability][order(-weighted.prob), .(x, weighted.prob,1)]))
+      trigrams   [target[,.(  v,w)], ][!(x %in% tags)][,weighted.prob := params$l3* (probability/2^20)][order(-weighted.prob), .(x, weighted.prob,3)][1:min(.N,10)], 
+      bigrams    [target[,.(    w)], ][!(x %in% tags)][,weighted.prob := params$l2* (probability/2^20)][order(-weighted.prob), .(x, weighted.prob,2)][1:min(.N,10)], 
+      unigrams   [1:100,]             [!(x %in% tags)][,weighted.prob := params$l1* (probability/2^20)][order(-weighted.prob), .(x, weighted.prob,1)]))
     
     ngram.probs<<- data.table()
     
