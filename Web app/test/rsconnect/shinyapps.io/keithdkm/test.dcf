@@ -1,9 +1,8 @@
 name: test
 account: keithdkm
 server: shinyapps.io
-appId: 77851
-bundleId: 349997
+bundleId: 352396
 url: https://keithdkm.shinyapps.io/test/
-when: 1452831459.85713
+when: 1453184539.32315
 asMultiple: FALSE
 asStatic: FALSE

@@ -1,5 +1,6 @@
 library(shiny)
 library(shinyBS)
+library(shinythemes)
 library(data.table)
 library(stringi)
 
@@ -11,9 +12,10 @@ restore.ngrams<-function (path) {
   trigrams<<- readRDS(file =  paste0(path,"trigrams.RDS"))
   quadrigrams<<- readRDS(file =  paste0(path,"quadrigrams.RDS"))}
 
-# restore.ngrams("data/")
+ restore.ngrams("data/")
 
-ui <- fluidPage(
+ui <- fluidPage(theme = shinytheme ("flatly"),
+                h1("Text Prediction Tool"),
   sidebarLayout(
     sidebarPanel(
       checkboxInput("enabled","Enable text prediction", T),
@@ -22,8 +24,31 @@ ui <- fluidPage(
       
     ),
     mainPanel(     
-      fluidRow(column(8,offset =0, textInput("target", "What do you want to say?" )),
-               actionButton(inputId = "reject", "Reject"),
+      fluidRow(column(6,offset =0, textInput("target", "What do you want to say?" ),
+                                   tags$style(type = "text/css", "#target {width :300px; height: 300px}")),
+               column(1,actionButton(inputId = "prediction1", label = "Prediction 1"),
+                      tags$style(type = "text/css", "#prediction1 {width :100px; height: 100px}"),
+                      actionButton(inputId = "prediction2", label = "Prediction 2"),
+                      actionButton(inputId = "prediction3", label = "Prediction 3"),
+                      actionButton(inputId = "reject",              "   Reject   ")),
+#                       HTML('<!DOCTYPE html>
+#                              <html>
+#                              <head>
+#                              <meta name="viewport" content="width=device-width, initial-scale=1">
+#                              <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+#                              <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+#                              <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+#                              </head>
+#                              <body>
+#                              
+#                              <div class="container">
+#                                          
+#                              <button type="button" class="btn btn-default btn-lg">Large Default Button</button>
+#                              
+#                              </div>
+#                              
+#                              </body>
+#                              </html>'),
                             
 #                     bsTooltip("target", "Start typing.  Press Enter to accept a prediction or start typing next word to reject it",
 #                               "right", options = list(container = "body"))
@@ -61,11 +86,11 @@ server <- function(input, output, session) {
    observe(
      label = "Watch target",
      x      =  {
-       cat ("reset reac predict")
+       # cat ("reset reac predict")
        input$target
        reac$predict<-FALSE} ) 
  # if user types and predict flag is set then copy to target phrase to reac$target to invalidate 
-   observe(   x = {  invalidateLater(1050,session)
+   observe(   x = {  invalidateLater(1250,session)
                      input$target
                      input$enabled
                      
@@ -92,15 +117,20 @@ server <- function(input, output, session) {
                 x = { 
                   # isolate(cat("Make Prediction", input$target, input$enabled, reac$target, reac$predict, "\n", sep =","))
                   # make sure reac has the latest version of input before predicting
-                     x <- if ( stri_endswith(reac$target, fixed = " ")) 
-                            paste0(reac$target, if (reac$enabled) phrase(reac$target
-                                                                          ,1,
-                                                                          "Interpolate") 
-                                                else "") 
-                    
-                         
+                     if ( stri_endswith(reac$target, fixed = " ")) {
+                       prediction<-if (reac$enabled) phrase(reac$target
+                                                            ,3,
+                                                            "Interpolate", params = list(l1 = 0.1,l2= 0.3, l3 = 0.4, l4 = 0.2))      
+                                  else prediction<-rep(" ",3)    
+                     
+                                              
+                    x<- paste0(reac$target, prediction[1])
+                    updateButton(session,"prediction1",label = prediction[1])
+                    updateButton(session,"prediction2",label = prediction[2])   
+                    updateButton(session,"prediction3",label = prediction[3])   
                     updateTextInput(session, "target", value = x)
-                    predicted.last.word<-TRUE
+                    # output$x<-x
+                    predicted.last.word<-TRUE}
               
                 
           })
