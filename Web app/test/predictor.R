@@ -1,5 +1,5 @@
 
-
+getwd()
 
 conf<-file("data/dirty.txt",'r')
 profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")    #profanity<-readLines(conf)
@@ -16,7 +16,7 @@ phrase <-function(target,n = 1,model = "Interpolate", params = list(l1 = 0.15, l
   y <- ""
   tags<-c("<p>","<n>", "<s>","<e>", "<UNK>")
   
-  
+  target<-stri_trim_right(target)   #remove whitespace
   target<-gsub   ('[<>]+'           ," ",target) #remove tagging chars
   target<-tolower(target) #set everything to lowercase
   target<-gsub   (profanity         ,"<p>", target) #tag profanity
