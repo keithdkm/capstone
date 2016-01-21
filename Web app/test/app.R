@@ -12,25 +12,33 @@ restore.ngrams<-function (path) {
   trigrams<<- readRDS(file =  paste0(path,"trigrams.RDS"))
   quadrigrams<<- readRDS(file =  paste0(path,"quadrigrams.RDS"))}
 
- restore.ngrams("data/")
+ # restore.ngrams("data/")
 
 ui <- fluidPage(theme = shinytheme ("flatly"),
                 h1("Text Prediction Tool"),
   sidebarLayout(
     sidebarPanel(
       checkboxInput("enabled","Enable text prediction", T),
-      actionButton(inputId = "reset", label = "Clear Text")
+      actionButton(inputId = "reset", label = "Clear Text"),
+      tags$style(type = "text/css", "#reset {margin:3px; width :175px; height:50px; color:red}"),
+      actionButton(inputId = "copy" , label = "Copy Text to Clipboard"),
+      tags$style(type = "text/css", "#copy {margin:3px; width :175px; height:50px}")
       
       
     ),
     mainPanel(     
-      fluidRow(column(6,offset =0, textInput("target", "What do you want to say?" ),
-                                   tags$style(type = "text/css", "#target {width :300px; height: 300px}")),
-               column(1,actionButton(inputId = "prediction1", label = "Prediction 1"),
-                      tags$style(type = "text/css", "#prediction1 {width :100px; height: 100px}"),
-                      actionButton(inputId = "prediction2", label = "Prediction 2"),
-                      actionButton(inputId = "prediction3", label = "Prediction 3"),
+      fluidRow(column(5,offset =0, 
+                      # textInput("target", "What do you want to say?" ),
+                                   tags$textarea(id="target", rows=20, cols=22, label = "What do you want to say?"  )),
+                                   # tags$style(type = "text/css", "#target { width :250px; height: 300px}")),
+               column(1,actionButton(inputId = "prediction1", label = "First Alternative"),
+                      tags$style(type = "text/css", "#prediction1 {margin:3px; width :175px; height:50px}"),
+                      actionButton(inputId = "prediction2", label = "Second Alternative"),
+                      tags$style(type = "text/css", "#prediction2 {margin:3px; width :175px; height:50px}"),
+                      actionButton(inputId = "prediction3", label = "Third Alternative"),
+                      tags$style(type = "text/css", "#prediction3 {margin:3px; width :175px; height:50px}"),
                       actionButton(inputId = "reject",              "   Reject   ")),
+                      tags$style(type = "text/css", "#reject {margin:3px; width :175px; height:50px}"),
 #                       HTML('<!DOCTYPE html>
 #                              <html>
 #                              <head>
@@ -71,11 +79,11 @@ server <- function(input, output, session) {
  
   observe( label = "Reject last word",
            x = { input$reject 
-                  updateTextInput(session, 
-                                                          "target",
-                                                          value = isolate(stri_trim_right(stri_sub(input$target,
-                                                                                   1,
-                                                                                   stri_locate_last_words(input$target)[1]-2))))
+                  updateTextInput(session,
+                                  "target", 
+                                  value = isolate(stri_trim_right(stri_sub(input$target,
+                                                                            1,
+                                                                            stri_locate_last_words(input$target)[1]-2))))
                   
                   })
   
@@ -119,15 +127,15 @@ server <- function(input, output, session) {
                   # make sure reac has the latest version of input before predicting
                      if ( stri_endswith(reac$target, fixed = " ")) {
                        prediction<-if (reac$enabled) phrase(reac$target
-                                                            ,3,
+                                                            ,4,
                                                             "Interpolate", params = list(l1 = 0.1,l2= 0.3, l3 = 0.4, l4 = 0.2))      
-                                  else prediction<-rep(" ",3)    
+                                  else prediction<-rep(" ",4)    
                      
                                               
                     x<- paste0(reac$target, prediction[1])
-                    updateButton(session,"prediction1",label = prediction[1])
-                    updateButton(session,"prediction2",label = prediction[2])   
-                    updateButton(session,"prediction3",label = prediction[3])   
+                    updateButton(session,"prediction1",label = prediction[2])
+                    updateButton(session,"prediction2",label = prediction[3])   
+                    updateButton(session,"prediction3",label = prediction[4])   
                     updateTextInput(session, "target", value = x)
                     # output$x<-x
                     predicted.last.word<-TRUE}

@@ -30,6 +30,8 @@ phrase <-function(target,n = 1,model = "Interpolate", params = list(l1 = 0.15, l
   
   phrase.length <- stri_count_words(target) 
   
+  if (phrase.length>0){
+  
   if (phrase.length==1) target<-data.table(V1 = "", 
                                            V2 = "", 
                                            V3 = target) else 
@@ -102,5 +104,7 @@ phrase <-function(target,n = 1,model = "Interpolate", params = list(l1 = 0.15, l
     
   }
   
-  else print("Not a valid model")
+  else print("Not a valid model")}
+  else y<-""
+  
   y}
