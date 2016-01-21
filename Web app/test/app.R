@@ -143,10 +143,10 @@ server <- function(input, output, session) {
 #                                  "reac enabled:",reac$enabled, 
 #                                  "reac target:",reac$target, 
 #                                  "Predict:",reac$predict,"\n", sep =","))
-      
-                     if (isolate(reac$predict))
-                       {reac$target<-input$target
-                       reac$enabled <-input$enabled}
+                     
+                     reac$enabled <-input$enabled
+                     
+                     if (isolate(reac$predict))reac$target<-input$target
                      else isolate(reac$predict  <- TRUE)
                      
                      predicted.last.word<-FALSE
@@ -163,9 +163,9 @@ server <- function(input, output, session) {
                   # make sure reac has the latest version of input before predicting
                      if ( stri_endswith(reac$target, fixed = " ")) {
                        prediction<<-if (reac$enabled) phrase(reac$target
-                                                            ,3,
+                                                            ,4,
                                                             "Interpolate", params = list(l1 = 0.1,l2= 0.3, l3 = 0.4, l4 = 0.2))      
-                                  else prediction<-rep(" ",3)    
+                                  else prediction<-rep(" ",4)    
                      
                                               
                     x<- paste0(reac$target, prediction[1])
