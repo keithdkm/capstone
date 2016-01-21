@@ -11,7 +11,7 @@ contractions <- data.table(read.csv(contr,F))
 close(contr)
 
                                     
-phrase <-function(t.text,n = 1,model = "Interpolate", params = list(l1 = 0.15, l2 = 0.2, l3 = 0.4, l4 = 0.25)) {
+phrase <-function(t.text,n = 1,model = "Interpolate", params = list(l1 = 0.1, l2 = 0.3, l3 = 0.4, l4 = 0.2)) {
 
 
   y <- ""
