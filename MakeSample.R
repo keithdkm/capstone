@@ -360,11 +360,9 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage, unk = TRUE){
                               count       = old_count - unigrams[Cum.Probability<=(coverage/100),sum(count)],
                               Mean.Probability = (100-coverage)/100,
                               Cum.Probability  = 1,
-                              probability = as.integer(round(2^20*((100-coverage)/100))),fill = T ))
+                              probability = as.integer(round(2^20*((100-coverage)/100)),fill = T )))
   
-
-                   
-                   }
+  }
  #remove Mean and Cumulative probability columns as they are no longer required    
   unigrams[,c("Cum.Probability","Mean.Probability"):=NULL]            
         
@@ -494,6 +492,8 @@ accuracy<-function(tests = 20, num.words = 500,num.sample, model = "Interpolate"
    pred_words<-""
    all.samp.accs<-NULL
    all.samp.times<-NULL
+   set.seed(310883)
+   
    print(paste("Parameters of lambda1 =", params$l1,"lambda2 = ",params$l2,"lambda3 =",params$l3,"lambda4 = ",params$l4 ))
    
   for (i in round(sample(1:num.sample,size = tests,replace = F))) {
