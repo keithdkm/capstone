@@ -31,40 +31,40 @@ phrase <-function(t.text,n = 1,model = "Interpolate", params = list(l1 = 0.15, l
   
   phrase.length <- stri_count_boundaries(t.text) 
   
+  phrase.length<- ifelse (phrase.length>3, 3, phrase.length)
+  
   if (phrase.length>0){
+    
+  t.text<-as.list(stri_extract_all_boundaries(t.text)[[1]][1:3])
   
-#   if (phrase.length==1) t.text<-data.table(u = "", 
-#                                            v = "", 
-#                                            w = t.text) else {
-#                                              if (phrase.length==2) t.text<-data.table( u = "", 
-#                                                                                       V2 = stri_extract_all_boundaries(t.text,)[[1]][1], 
-#                                                                                       V3 = stri_extract_all_boundaries(t.text)[[1]][2]) else
-#                                                                                         target<-data.table(t(stri_extract_all_boundaries(t.text)[[1]][(phrase.length-2):phrase.length]))}
+  if (phrase.length==1)   
+    
+    target<-data.table(u = "", 
+                       v = "", 
+                       w = stri_trim_right(t.text[[1]])) else 
+                                       if (phrase.length==2) target<-data.table( u = "", 
+                                                                                 v = stri_trim_right(t.text[[1]]), 
+                                                                                 w = stri_trim_right(t.text[[2]])) else
+                                                                                 target<-data.table( u = stri_trim_right(t.text[[1]]), 
+                                                                                                     v = stri_trim_right(t.text[[2]]), 
+                                                                                                     w = t.text[[3]])
+  
+
 #   
+#   t.text<-as.list(stri_extract_all_boundaries(t.text)[[1]][3:1])  
+#    
+#   #load  copy target text into datatable   
+#   target<-data.table(u = t.text[[1]], v=t.text[[2]], w =t.text[[3]])
+#    
+# 
+#    
+#   # setnames(target, c("V1","V2", "V3"),c("u","v","w"))
   
-  target<-data.table(u = "", v="", w = "")
-   
-  #load  copy target text into datatable
-  target[, c("w","v","u") := as.list(stri_extract_all_boundaries(t.text)[[1]][3:1])] 
-  
-  
-  
-    
-    
-    
-    #If phrase is longer than 3 words, discard all but the last 3
-  
-  
-  
-  # setnames(target, c("V1","V2", "V3"),c("u","v","w"))
-  
-  if (phrase.length>3) {phrase.length<-3}
+ 
   
   
   # replace out of vocab words in target with <UNK> tag
   target[,c("u","v","w"):=lapply(.SD , function(y) {
-    y<-ifelse(is.na(y),"",y)  #replace NAs with blanks
-    y<-stri_trim_right(y)
     # print(y %in% c(unigrams$x,""))
     ifelse ((y %in% c(unigrams$x,"")), y , "<UNK>")  #replace OOV words with <UNK> 
     
@@ -106,10 +106,10 @@ phrase <-function(t.text,n = 1,model = "Interpolate", params = list(l1 = 0.15, l
     table.predict<<-  data.table(rbind(
       
       
-      quadrigrams[target[,.(u,v,w)], nomatch = 0 ][!(x %in% tags)][,weighted.prob := params$l4* (probability/2^20)][order(-weighted.prob), .(u,v,w,x, weighted.prob,table = 4)][1:min(.N,10)],   
-      trigrams   [target[,.(  v,w)],  ][!(x %in% tags)][,weighted.prob := params$l3* (probability/2^20)][order(-weighted.prob), .(v,w,x, weighted.prob,table = 3)][1:min(.N,10)], 
-      bigrams    [target[,.(    w)],  ][!(x %in% tags)][,weighted.prob := params$l2* (probability/2^20)][order(-weighted.prob), .(w,x, weighted.prob,table = 2)][1:min(.N,10)], 
-      unigrams   [order(-probability),][!(x %in% tags)][,weighted.prob := params$l1* (probability/2^20)][order(-weighted.prob), .(x, weighted.prob,table = 1)],fill = T))
+      quadrigrams[target[,.(u,v,w)], nomatch = 0 ][!(x %in% tags)][,weighted.prob := params$l4* (probability/2^20)][order(-weighted.prob), .(u,v,w,x, weighted.prob,table = 4, lambda = params$l4)][1:min(.N,10)],   
+      trigrams   [target[,.(  v,w)],  ][!(x %in% tags)][,weighted.prob := params$l3* (probability/2^20)][order(-weighted.prob), .(v,w,x, weighted.prob,table = 3, lambda = params$l3)][1:min(.N,10)], 
+      bigrams    [target[,.(    w)],  ][!(x %in% tags)][,weighted.prob := params$l2* (probability/2^20)][order(-weighted.prob), .(w,x, weighted.prob,table = 2, lambda = params$l2)][1:min(.N,10)], 
+      unigrams   [order(-probability),][!(x %in% tags)][,weighted.prob := params$l1* (probability/2^20)][order(-weighted.prob), .(x, weighted.prob,table = 1, lambda = params$l1)],fill = T))
     
     ngram.probs<<- data.table()
     
