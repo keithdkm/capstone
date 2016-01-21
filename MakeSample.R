@@ -365,7 +365,8 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage, unk = TRUE){
 
                    
                    }
-                 
+ #remove Mean and Cumulative probability columns as they are no longer required    
+  unigrams[,c("Cum.Probability","Mean.Probability"):=NULL]            
         
                 setkey(unigrams,x)
 
