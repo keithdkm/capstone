@@ -84,8 +84,44 @@ server <- function(input, output, session) {
                                   value = isolate(stri_trim_right(stri_sub(input$target,
                                                                             1,
                                                                             stri_locate_last_words(input$target)[1]-2))))
-                  
                   })
+ 
+  
+  observeEvent(input$prediction1,handlerExpr = 
+                 
+                 {
+                   
+                   x<-stri_trim_right(stri_sub(input$target,
+                                           1,
+                                           stri_locate_last_words(input$target)[1]-2))
+                   
+                  x<- paste(x, prediction[2])
+                  
+                  updateTextInput(session, "target", value = x)}) 
+  
+  observeEvent(input$prediction2,handlerExpr = 
+                 
+  {
+    
+    x<-stri_trim_right(stri_sub(input$target,
+                                1,
+                                stri_locate_last_words(input$target)[1]-2))
+    
+    x<- paste(x, prediction[3])
+    
+    updateTextInput(session, "target", value = x)}) 
+  
+  observeEvent(input$prediction3,handlerExpr = 
+                 
+  {
+    
+    x<-stri_trim_right(stri_sub(input$target,
+                                1,
+                                stri_locate_last_words(input$target)[1]-2))
+    
+    x<- paste(x, prediction[4])
+    
+    updateTextInput(session, "target", value = x)}) 
   
  #Watch Clear Text button
    observe( label = "Clear text box",
@@ -126,10 +162,10 @@ server <- function(input, output, session) {
                   # isolate(cat("Make Prediction", input$target, input$enabled, reac$target, reac$predict, "\n", sep =","))
                   # make sure reac has the latest version of input before predicting
                      if ( stri_endswith(reac$target, fixed = " ")) {
-                       prediction<-if (reac$enabled) phrase(reac$target
-                                                            ,4,
+                       prediction<<-if (reac$enabled) phrase(reac$target
+                                                            ,3,
                                                             "Interpolate", params = list(l1 = 0.1,l2= 0.3, l3 = 0.4, l4 = 0.2))      
-                                  else prediction<-rep(" ",4)    
+                                  else prediction<-rep(" ",3)    
                      
                                               
                     x<- paste0(reac$target, prediction[1])
