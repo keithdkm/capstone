@@ -1,11 +1,11 @@
 
-getwd()
+path<- getwd()
 
-conf<-file("data/dirty.txt",'r')
+conf<-file(paste0(path,"/Web app/test/data/dirty.txt"),'r')
 profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")    #profanity<-readLines(conf)
 close (conf)
  
-contr<-file("data/contractions",'r')  #load list of English contractions
+contr<-file(paste0(path,"/Web app/test/data/contractions"),'r')  #load list of English contractions
 contractions <- data.table(read.csv(contr,F))
 close(contr)
                            
