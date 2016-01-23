@@ -1,28 +1,42 @@
-A Text Prediction Tool
+A Text Prediction Algorithm with a Web Interface
 ========================================================
 author: Keith Miller
 date: 19th January 2016
 
-First Slide
+Key Features
 ========================================================
 
 For more details on authoring R presentations click the
 **Help** button on the toolbar.
 
-- Bullet 1
-- Bullet 2
-- Bullet 3
+- Easy user interface with automatic prediction and alternate predictions
+- Small enough and efficient to run on a mobile phone
+- Sophisticated tagging system enables unknown words, sentence boundaries and numbers to be used for more accurate predictions
+- Large sample set - 
 
-Slide With Code
+The Algorithm
 ========================================================
 
-```{r}
-summary(cars)
-```
+ - It is a quadrigram model trained on a corpus of around 35,000,000 words
+ - It has a vocabulary of around 15,000 words covering around 95% of the all words used in its training corpus
+ - It uses interpolation to blend probabilities
+ - P(y)=λ1P(unigram|∅)+λ2P(bigram|unigram)+λ3P(trigram|bigram)+λ4P(tetragram|trigram)
+ - Smoothing
+ - ngram weights were optimized 
 
-Slide With Plot
+The Application
 ========================================================
 
-```{r, echo=FALSE}
-plot(cars)
-```
+ - Goal was 25% accuracy with a standard deviation of 2% points
+ - Actual performance is 22% accuracy with 8% standard deviation
+ - Total memory footprint is 
+ - How fast is it - average prediction time on i7 laptop with 8Gb RAM is 0.04secs
+ - 
+Results
+========================================================
+
+ - Goal was 25% accuracy with a standard deviation of 2% points
+ - Actual performance - 
+ - Total memory footprint is ?????
+ - How fast is it - average prediction time on i7 laptop with 8Gb RAM is 0.04secs
+ - 
