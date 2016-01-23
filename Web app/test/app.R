@@ -12,7 +12,7 @@ restore.ngrams<-function (path) {
   trigrams<<- readRDS(file =  paste0(path,"trigrams.RDS"))
   quadrigrams<<- readRDS(file =  paste0(path,"quadrigrams.RDS"))}
 
-# restore.ngrams("data/")
+restore.ngrams("data/")
 
 ui <- fluidPage(theme = shinytheme ("flatly"),
                 h1("Text Prediction Tool"),
@@ -97,16 +97,15 @@ server <- function(input, output, session) {
                      invalidateLater(isolate(input$speed*1000),session)
                      input$target
                      input$enabled
-                     # reac$predict<-stri_endswith(input$target, fixed = " ")
+                     # reac$predict<-!(stri_endswith(reac$target, fixed = " "))
 #                      isolate(cat("Set timer: ", 
-#                                  "input target:",input$target, 
-#                                  "reac enabled:",reac$enabled, 
+#                                  "input target:",input$target,
 #                                  "reac target:",reac$target, 
 #                                  "Predict:",reac$predict,"\n", sep =","))
                      
                      # isolate(reac$enabled <- input$enabled)
                      
-                     if (isolate(reac$predict)){ isolate(reac$target  <- input$target)
+                     if (isolate(reac$predict & (stri_endswith(input$target, fixed = " ")))){ isolate(reac$target  <- input$target)
                                                  }
                      
                      else isolate(reac$predict              <- TRUE)
