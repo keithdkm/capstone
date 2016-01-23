@@ -3,22 +3,23 @@ A Text Prediction Algorithm with a Web Interface
 author: Keith Miller
 date: 19th January 2016
 
-Key Features
+Project Goals
 ========================================================
 
-For more details on authoring R presentations click the
-**Help** button on the toolbar.
-
+- Develop a web based, ngram language model driven text prediction tool
+- Using a large corpus randomly drawn from news, blogs and twitter web sources, devel
 - Easy user interface with automatic prediction and alternate predictions
-- Small enough and efficient to run on a mobile phone
 - Sophisticated tagging system enables unknown words, sentence boundaries and numbers to be used for more accurate predictions
-- Large sample set - 
+- Large sample
+
+
+
 
 The Algorithm
 ========================================================
 
  - It is a quadrigram model trained on a corpus of around 35,000,000 words
- - It has a vocabulary of around 15,000 words covering around 95% of the all words used in its training corpus
+ - It has a vocabulary of around 15,000 words covering  92% of the all words used in its training corpus
  - It uses interpolation to blend probabilities
  - P(y)=λ1P(unigram|∅)+λ2P(bigram|unigram)+λ3P(trigram|bigram)+λ4P(tetragram|trigram)
  - Smoothing
