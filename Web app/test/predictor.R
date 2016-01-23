@@ -6,9 +6,9 @@ conf<-file(paste0(path,"/data/dirty.txt"),'r')
 profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")    #profanity<-readLines(conf)
 close (conf)
  
-contr<-file(paste0(path,"/data/contractions.txt"),'r')  #load list of English contractions
-contractions <- data.table(read.csv(contr,F))
-close(contr)
+# contr<-file(paste0(path,"/data/contractions.txt"),'r')  #load list of English contractions
+contractions <- readRDS(paste0(path,"/data/contraction.RDS"))
+# close(contr)
 
 .simpleCap <- function(x) {
   s <- strsplit(x, " ")[[1]]
@@ -119,7 +119,10 @@ phrase <-function(t.text,n = 1,model = "Interpolate", params = list(l1 = 0.15, l
     #sum the probabilities      
 
     y<-table.predict[,.( prob = sum(weighted.prob)), by = x][order(-prob), x ][1:n]
-
+#substitute full contraction for stripped contractions and "I" for "i"
+    y<-unlist(lapply(y, function(t.wrd) ifelse (t.wrd %in% contractions$stripped, contractions[(contractions$stripped==t.wrd),.(contr)],t.wrd)))
+    
+    #capitalize start of sentence
      if (target$w=="<s>") y<-unlist(lapply(y,.simpleCap))
     y
   }
