@@ -35,8 +35,11 @@ load.data<-function(){
     allblogs<<- iconv(readLines("Initial Dataset/final/en_US/en_US.blogs.txt",
                                 n       = -1,
                                 skipNul = TRUE, 
-                                warn    = FALSE,
-                                encoding= "UTF-8"))
+                                warn    = FALSE
+                                ,encoding= "UTF-8"
+                                ))
+    
+
     print("Blog data loaded")
     
   }
@@ -48,8 +51,11 @@ load.data<-function(){
     allnews<<- iconv(readLines("Initial Dataset/final/en_US/en_US.news.txt", 
                                n       = -1,
                                skipNul = TRUE, 
-                               warn    = FALSE ,
-                               encoding= "UTF-8"))
+                               warn    = FALSE,
+                               encoding= "UTF-8"
+                               ))
+   
+
     print("News data loaded")
     # print(unlist(datasize(allnews))) 
   }
@@ -60,8 +66,10 @@ load.data<-function(){
                                   n       = -1,
                                   skipNul = TRUE, 
                                   warn    = FALSE,
-                                  encoding= "UTF-8"))
-    
+                                  encoding= "UTF-8"
+                                  ))
+   
+
     print("Twitter data loaded")
     # print(unlist(datasize(alltwitter)))
   }
@@ -136,19 +144,19 @@ corpSample<-function(n,size)  {
     #replace all apostrophes with space '
     ## TEMPORARY replacing apostrohes with NULLS to treat contractions/possesives as unigrams
     # x<-tm_map(x, replacechars, '\'',              " \'") 
-    x<-tm_map(x, replacechars, '[\'’]', "") 
+    x<-tm_map(x, replacechars, "['’]", "") 
     # writeLines("\n Replace apostrophes with space apostrophes so that tokenizer treats contractions as two words", con)
     writeLines("\n Replace apostrophes with NULL  so that tokenizer treats contractions as one words", con)
     
     writeLines(substring(x[[1]]$content,1,12000),con)
     
         
-    #replace all sentence ending chars with sentence end tag ,newline and sentence start tag
+    #replace all sentence boundaries with sentence  tag 
     
-#     x<-tm_map(x, replacechars, '[.?!]+ ',              " <e> \n <s> ") 
-#     writeLines("\nReplace sentence start and end\n", con)
-#     writeLines(substring(x[[1]]$content,1,12000),con)
-#     
+    x<-tm_map(x, replacechars, '[.?!]+ ',              " <s> ") 
+    writeLines("\nReplace sentence start and end\n", con)
+    writeLines(substring(x[[1]]$content,1,12000),con)
+    
     #remove apostrohes from contractions 
 #     x<-tm_map(x, replacechars, '[\'\`]',      "" )  
 #     writeLines("\nRemove apostrophes", con)
@@ -167,16 +175,36 @@ corpSample<-function(n,size)  {
     writeLines("\nRemove other unknown characters\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
-    #Remove single letters that are not valid single letters 
-    x<-tm_map(x, replacechars, "[ ][^ai\n][ ]",       " ") 
-    writeLines("\nRemove invalid single characters\n", con)
-    writeLines(substring(x[[1]]$content,1,12000),con)
+   
+   
+    
+    
     
     #remove extra whitespace 
     x<-tm_map(x, replacechars, '[ ][ ]+', " ") 
     writeLines("\nRemove additional whitespace characters\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
+    
+    
+    
+    #Attach floating contractions to their preceding words for  apostophes not picked up by apostrophes scan
+    pp<-c("s","d","t","ve", "m" ,"re", "ll")
+    
+    for (i in pp) {
+      x<-tm_map(x, replacechars, paste0(" ",i," "), paste0(i," ")) }
+    writeLines("\nAttach floating contractions\n", con)
+    writeLines(substring(x[[1]]$content,1,12000),con)
+    
+    #Remove single letters that are not valid single letters 
+    x<-tm_map(x, replacechars, "[ ][^ai\n][ ]",       " ") 
+    writeLines("\nRemove invalid single characters\n", con)
+    writeLines(substring(x[[1]]$content,1,12000),con)
+    
+    
+    
     close(con)
+    
+    
     return(x)
     
   }
@@ -402,7 +430,7 @@ if (max.ng > 2) {
 
    setkey(trigrams,v,w,x)
    
-   trigrams<<-unique (trigrams)
+   trigrams<<-unique (trigrams[count>1])
   
   
   trigrams[, probability := as.integer(round(2^20*(count/ bigrams[.(trigrams$v,trigrams$w), count])))]
@@ -423,7 +451,7 @@ if (max.ng > 2) {
     
     setkey(quadrigrams,u,v,w,x)
     
-    quadrigrams<<-unique (quadrigrams)
+    quadrigrams<<-unique (quadrigrams[count>1])
     
     quadrigrams[, probability := as.integer(round(2^20*(count/ (trigrams[.(quadrigrams$u,quadrigrams$v,quadrigrams$w),count])),0))]
     }
@@ -492,7 +520,7 @@ accuracy<-function(tests = 20, num.words = 500,num.sample, model = "Interpolate"
    pred_words<-""
    all.samp.accs<-NULL
    all.samp.times<-NULL
-   set.seed(310883)
+   set.seed(8992066)
    
    print(paste("Parameters of lambda1 =", params$l1,"lambda2 = ",params$l2,"lambda3 =",params$l3,"lambda4 = ",params$l4 ))
    
@@ -563,7 +591,7 @@ main<-function(resamp = F,path = "",num.sample = 200, sz.sample = 0.1, gengram =
           x<-readRDS("~/R/Capstone/Results/masterlist.RDS"),
           x<-data.table(NULL))
   
-  acc <-accuracy(tests = 5 , num.words =200 , num.sample,  params = params)
+  acc <-accuracy(tests = 10 , num.words = 500 , num.sample, model = model,  params = params)
   
   run.number<-x[,max(unlist(Run.number))]+1
   
