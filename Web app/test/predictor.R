@@ -31,24 +31,27 @@ phrase <-function(t.text,n = 1,model = "Interpolate", params = list(l1 = 0.15, l
   
   phrase.length <- stri_count_boundaries(t.text) 
   
-  phrase.length<- ifelse (phrase.length>3, 3, phrase.length)
+ 
   
   if (phrase.length>0){
     
-  t.text<-as.list(stri_extract_all_boundaries(t.text)[[1]][1:3])
+  t.text<-as.list(stri_extract_all_boundaries(t.text)[[1]])
+  
+  
   
   if (phrase.length==1)   
     
     target<-data.table(u = "", 
                        v = "", 
-                       w = stri_trim_right(t.text[[1]])) else 
+                       w = stri_trim_right(t.text[1])) else 
                                        if (phrase.length==2) target<-data.table( u = "", 
-                                                                                 v = stri_trim_right(t.text[[1]]), 
-                                                                                 w = stri_trim_right(t.text[[2]])) else
-                                                                                 target<-data.table( u = stri_trim_right(t.text[[1]]), 
-                                                                                                     v = stri_trim_right(t.text[[2]]), 
-                                                                                                     w = t.text[[3]])
-  
+                                                                                 v = stri_trim_right(t.text[1]), 
+                                                                                 w = stri_trim_right(t.text[2])) else
+                                                                                 target<-data.table( u = stri_trim_right(t.text[[phrase.length-2]]), 
+                                                                                                     v = stri_trim_right(t.text[[phrase.length-1]]), 
+                                                                                                     w = stri_trim_right(t.text[[phrase.length]]))
+                                                                                
+    phrase.length<- ifelse (phrase.length>3, 3, phrase.length)
 
 #   
 #   t.text<-as.list(stri_extract_all_boundaries(t.text)[[1]][3:1])  
