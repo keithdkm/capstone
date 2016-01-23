@@ -379,8 +379,8 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage, unk = TRUE){
   
   old_count<- unigrams[,sum(count)] 
   #unigrams<<-unigrams[!(ngram %in% tags),]  #remove tagged counts - we don't need to know probabilities of tags for  the moment
-  #????????????????????? should <n> and <p. have probability mass?  remove i below to give them mass
-  unigrams<<-rbind(unigrams[!(x %in% tags),Mean.Probability := count/sum(count)][(x %in% tags),Mean.Probability := 0][order(-count),
+  #????????????????????? should <n> and <p. have probability mass?  remove i below to give them mass   -- DONE 1/22/16
+  unigrams<<-rbind(unigrams[,Mean.Probability := count/sum(count)][order(-count),
                                                                    ':='(Cum.Probability  = cumsum(Mean.Probability),
                                                                         probability      = as.integer(round(2^20*(Mean.Probability))))][Cum.Probability<=(coverage/100),][order(x),],
                    
@@ -430,7 +430,7 @@ if (max.ng > 2) {
 
    setkey(trigrams,v,w,x)
    
-   trigrams<<-unique (trigrams[count>1])
+   trigrams<<-unique (trigrams)
   
   
   trigrams[, probability := as.integer(round(2^20*(count/ bigrams[.(trigrams$v,trigrams$w), count])))]
