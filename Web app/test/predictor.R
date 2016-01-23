@@ -106,10 +106,12 @@ phrase <-function(t.text,n = 1,model = "Interpolate", params = list(l1 = 0.15, l
     table.predict<<-  data.table(rbind(
       
       
-      quadrigrams[target[,.(u,v,w)], nomatch = 0 ][!(x %in% tags)][,weighted.prob := params$l4* (probability/2^20)][order(-weighted.prob), .(u,v,w,x, weighted.prob,table = 4, lambda = params$l4)][1:min(.N,10)],   
-      trigrams   [target[,.(  v,w)], nomatch = 0 ][!(x %in% tags)][,weighted.prob := params$l3* (probability/2^20)][order(-weighted.prob), .(v,w,x, weighted.prob,table = 3, lambda = params$l3)][1:min(.N,10)], 
-      bigrams    [target[,.(    w)], nomatch = 0 ][!(x %in% tags)][,weighted.prob := params$l2* (probability/2^20)][order(-weighted.prob), .(w,x, weighted.prob,table = 2, lambda = params$l2)][1:min(.N,10)], 
-      unigrams   [order(-probability),][!(x %in% tags)][,weighted.prob := params$l1* (probability/2^20)][order(-weighted.prob), .(x, weighted.prob,table = 1, lambda = params$l1)],fill = T))
+
+      quadrigrams[target[,.(u,v,w)], nomatch = 0 ][!(x %in% tags)][,weighted.prob := params$l4* (probability/2^25)][order(-weighted.prob), .(u,v,w,x, weighted.prob,table = 4, lambda = params$l4)][1:min(.N,10)],   
+      trigrams   [target[,.(  v,w)], nomatch = 0 ][!(x %in% tags)][,weighted.prob := params$l3* (probability/2^25)][order(-weighted.prob), .(v,w,x, weighted.prob,table = 3, lambda = params$l3)][1:min(.N,10)], 
+      bigrams    [target[,.(    w)], nomatch = 0 ][!(x %in% tags)][,weighted.prob := params$l2* (probability/2^25)][order(-weighted.prob), .(w,x, weighted.prob,table = 2, lambda = params$l2)][1:min(.N,10)], 
+      unigrams   [order(-probability),][!(x %in% tags)][,weighted.prob := params$l1* (probability/2^25)][order(-weighted.prob), .(x, weighted.prob,table = 1, lambda = params$l1)],fill = T))
+
     
     ngram.probs<<- data.table()
     

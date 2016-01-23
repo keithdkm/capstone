@@ -382,7 +382,7 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage, unk = TRUE){
   #????????????????????? should <n> and <p. have probability mass?  remove i below to give them mass   -- DONE 1/22/16
   unigrams<<-rbind(unigrams[,Mean.Probability := count/sum(count)][order(-count),
                                                                    ':='(Cum.Probability  = cumsum(Mean.Probability),
-                                                                        probability      = as.integer(round(2^20*(Mean.Probability))))][Cum.Probability<=(coverage/100),][order(x),],
+                                                                        probability      = as.integer(round(2^25*(Mean.Probability))))][Cum.Probability<=(coverage/100),][order(x),],
                    
                    data.table(x       = "<UNK>", 
                               count       = old_count - unigrams[Cum.Probability<=(coverage/100),sum(count)],
@@ -411,7 +411,7 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage, unk = TRUE){
   
   bigrams<<-unique (bigrams)
   
-  bigrams[, probability := as.integer(round(2^20*(count/ unigrams[bigrams$w, count])))]
+  bigrams[, probability := as.integer(round(2^25*(count/ unigrams[bigrams$w, count])))]
 
   setkey(bigrams,w,x)
   }
@@ -433,7 +433,7 @@ if (max.ng > 2) {
    trigrams<<-unique (trigrams)
   
   
-  trigrams[, probability := as.integer(round(2^20*(count/ bigrams[.(trigrams$v,trigrams$w), count])))]
+  trigrams[, probability := as.integer(round(2^25*(count/ bigrams[.(trigrams$v,trigrams$w), count])))]
   }
                 
    setkey (trigrams,v,w,x)                 
@@ -453,7 +453,7 @@ if (max.ng > 2) {
     
     quadrigrams<<-unique (quadrigrams[count>1])
     
-    quadrigrams[, probability := as.integer(round(2^20*(count/ (trigrams[.(quadrigrams$u,quadrigrams$v,quadrigrams$w),count])),0))]
+    quadrigrams[, probability := as.integer(round(2^25*(count/ (trigrams[.(quadrigrams$u,quadrigrams$v,quadrigrams$w),count])),0))]
     }
                   
                     # quadrigrams[,p4_wvu := log10(count)]
