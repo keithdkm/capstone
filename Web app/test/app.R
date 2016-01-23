@@ -21,27 +21,27 @@ ui <- fluidPage(theme = shinytheme ("flatly"),
       sliderInput("speed", "Prediction Speed (seconds)", value = 1.5, min = 0.1,max = 5,step = 0.1),
       checkboxInput("enabled","Enable text prediction", T),
       actionButton(inputId = "reset", label = "Clear Text"),
-      tags$style(type = "text/css", "#reset {margin:3px; width :175px; height:50px; color:red}")
+      shiny::tags$style(type = "text/css", "#reset {margin:3px; width :175px; height:50px; color:red}")
                 ),  #end of side bar panel 
 
 
 
     mainPanel(     
-      fluidRow(column(5,offset = 0, tags$textarea(id="target", rows=20, cols=30  )
+      fluidRow(column(5,offset = 0, shiny::tags$textarea(id="target", rows=20, cols=30  )
                       ), #end of first column,
                                     
                column(1,
                       actionButton(inputId = "prediction1", label = "First Alternative"),
-                      tags$style(type = "text/css", "#prediction1 {margin:3px; width :175px; height:50px}"),
+                      shiny::tags$style(type = "text/css", "#prediction1 {margin:3px; width :175px; height:50px}"),
                       
                       actionButton(inputId = "prediction2", label = "Second Alternative"),
-                      tags$style(type = "text/css", "#prediction2 {margin:3px; width :175px; height:50px}"),
+                      shiny::tags$style(type = "text/css", "#prediction2 {margin:3px; width :175px; height:50px}"),
                       
                       actionButton(inputId = "prediction3", label = "Third Alternative"),
-                      tags$style(type = "text/css", "#prediction3 {margin:3px; width :175px; height:50px}"),
+                      shiny::tags$style(type = "text/css", "#prediction3 {margin:3px; width :175px; height:50px}"),
                       
                       actionButton(inputId = "reject",              "   Reject   "),
-                      tags$style(type = "text/css", "#reject {margin:3px; width :175px; height:50px}"),
+                      shiny::tags$style(type = "text/css", "#reject {margin:3px; width :175px; height:50px}"),
                       
                        bsTooltip("speed", "Set how quickly you want a word predicted",
                                  "bottom", options = list(container = "body")),
