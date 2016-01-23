@@ -77,26 +77,26 @@ phrase <-function(t.text,n = 1,model = "Interpolate", params = list(l1 = 0.15, l
     
     if ( phrase.length  == 3 ) { y<-quadrigrams[target , .(x,probability), nomatch = 0 ]
     
-    if (y[,.N]==0) phrase.length<-phrase.length-1 else y<-y[order(probability)[1:n],x]}#print("Backing off to trigrams")
+    if (y[,.N]==0) phrase.length<-phrase.length-1 else y<-y[order(-probability)[1:min(n,.N)],x]}#print("Backing off to trigrams")
     
     
-    if ( phrase.length  == 2 ) {y<-    trigrams[target[,.(v,w)] , .(x,probability)]
-    
-    
-    
-    if (y[,.N]==0) phrase.length<-phrase.length-1 else y<-y[order(probability)[1:n], w]} #print("Backing off to bigrams")
+    if ( phrase.length  == 2 ) {y<-    trigrams[target[,.(v,w)] , .(x,probability), nomatch = 0 ]
     
     
     
-    
-    if ( phrase.length  == 1 ) {y<-     bigrams[target[,w], .(x,probability)]
-    
-    
-    if (y[,.N]==0) phrase.length<-phrase.length-1 else y<-y[order(probability)[1:n],v]} #print("Backing off to unigrams")
+    if (y[,.N]==0) phrase.length<-phrase.length-1 else y<-y[order(-probability)[1:min(n,.N)], x]} #print("Backing off to bigrams")
     
     
     
-    if ( phrase.length  == 0 )  y<-    unigrams[order(probability),ngram ][1:n]
+    
+    if ( phrase.length  == 1 ) {y<-     bigrams[target[,w], .(x,probability), nomatch = 0 ]
+    
+    
+    if (y[,.N]==0) phrase.length<-phrase.length-1 else y<-y[order(-probability)[1:min(n,.N)],x]} #print("Backing off to unigrams")
+    
+    
+    
+    if ( phrase.length  == 0 )  y<-    unigrams[order(-probability),x ][1:min(n,.N)]
     
   }
   
