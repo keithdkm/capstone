@@ -10,6 +10,11 @@ contr<-file(paste0(path,"/data/contractions.txt"),'r')  #load list of English co
 contractions <- data.table(read.csv(contr,F))
 close(contr)
 
+.simpleCap <- function(x) {
+  s <- strsplit(x, " ")[[1]]
+  paste(toupper(substring(s, 1, 1)), substring(s, 2),
+        sep = "", collapse = " ")
+}
                                     
 phrase <-function(t.text,n = 1,model = "Interpolate", params = list(l1 = 0.15, l2 = 0.2, l3 = 0.4, l4 = 0.25)) {
 
@@ -21,6 +26,7 @@ phrase <-function(t.text,n = 1,model = "Interpolate", params = list(l1 = 0.15, l
   t.text<-gsub   ('[<>]+'           ," ",t.text) #remove tagging chars
   t.text<-tolower(t.text) #set everything to lowercase
   t.text<-gsub   (profanity         ,"<p>", t.text) #tag profanity
+  t.text<-gsub   ('[.?!]+'," <s> ",t.text) #Replace end of sentence characters with <s> tag
   t.text<-gsub   ('((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   "<n>",t.text) #tag numbers
   t.text<-gsub   ('[\'’]'           , "" ,t.text)  #remove apostrophes
   t.text<-gsub   ('[()\"“”:;,_-]'   , " ",t.text) #remove other characters
@@ -53,16 +59,7 @@ phrase <-function(t.text,n = 1,model = "Interpolate", params = list(l1 = 0.15, l
                                                                                 
     phrase.length<- ifelse (phrase.length>3, 3, phrase.length)
 
-#   
-#   t.text<-as.list(stri_extract_all_boundaries(t.text)[[1]][3:1])  
-#    
-#   #load  copy target text into datatable   
-#   target<-data.table(u = t.text[[1]], v=t.text[[2]], w =t.text[[3]])
-#    
-# 
-#    
-#   # setnames(target, c("V1","V2", "V3"),c("u","v","w"))
-  
+
  
   
   
@@ -119,10 +116,10 @@ phrase <-function(t.text,n = 1,model = "Interpolate", params = list(l1 = 0.15, l
     
     #sum the probabilities      
 
-    y<-table.predict[,.( prob = sum(weighted.prob)), by = x][order(-prob),ifelse (x=="i","I", x) ][1:n]
+    y<-table.predict[,.( prob = sum(weighted.prob)), by = x][order(-prob), x ][1:n]
 
-    
-    
+     if (target$w=="<s>") y<-unlist(lapply(y,.simpleCap))
+    y
   }
   
   else print("Not a valid model")}
