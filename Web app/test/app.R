@@ -94,7 +94,7 @@ server <- function(input, output, session) {
  # if user types and predict flag is set then copy to target phrase to reac$target to invalidate 
    observe( label = "Set Timer",
             x     = {  
-                     # invalidateLater(isolate(input$speed*1000),session)
+                     invalidateLater(isolate(input$speed*1000),session)
                      input$target
                      input$enabled
                      # reac$predict<-stri_endswith(input$target, fixed = " ")
@@ -118,7 +118,8 @@ server <- function(input, output, session) {
      
   observe(  label = "Make Prediction",  
     
-            x = { reac$target
+            x = {
+              reac$target
               # isolate(cat("Make Prediction", input$target, input$enabled, reac$target, reac$predict, "\n", sep =","))
               isolate(reac$predict              <- FALSE)
               if ( stri_endswith(isolate(input$target), fixed = " ") & !stri_endswith(isolate(input$target), fixed = ". "))
@@ -133,15 +134,15 @@ server <- function(input, output, session) {
 #                    { s<-strsplit(prediction, " ")[[1]]
 #                   paste(toupper(substring(s, 1, 1)), substring(s, 2),
 #                         sep = "", collapse = " ")}, prediction)
-              browser()  
-              x<- paste0  (reac$target,                      prediction[1])
+              
+                x<- paste0  (reac$target,                      prediction[1])
                 updateButton(session,    "prediction1",label = ifelse(is.na(prediction[2]),"First Alternative",prediction[2]))
                 updateButton(session,    "prediction2",label = ifelse(is.na(prediction[3]),"Second Alternative",prediction[3]))   
                 updateButton(session,    "prediction3",label = ifelse(is.na(prediction[4]),"Third Alternative",prediction[4]))   
                 updateTextInput(session, "target", value = x)
                 # predicted.last.word<-TRUE
                 }
-                }
+                } 
                 })
   
   observeEvent(  input$reject,
@@ -156,7 +157,9 @@ server <- function(input, output, session) {
  
 ### Button Handlers 
    
-  observeEvent((input$prediction1 & !(is.na(prediction[2]))),handlerExpr = 
+  observeEvent((input$prediction1 
+                # & !(is.na(prediction[2]))
+                    ),handlerExpr = 
                  
   {
     
