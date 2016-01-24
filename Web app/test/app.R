@@ -127,19 +127,17 @@ server <- function(input, output, session) {
                                         n =  4,
                                         model = "Interpolate", 
                                         params = list(l1 = 0.1,l2= 0.3, l3 = 0.4, l4 = 0.2))
+   
               
-              #### code to capitalize start of sentences
-#                   prediction<- ifelse ( stri_endswith(isolate(input$target), fixed = ".  "),
-#                    { s<-strsplit(prediction, " ")[[1]]
-#                   paste(toupper(substring(s, 1, 1)), substring(s, 2),
-#                         sep = "", collapse = " ")}, prediction)
-              
-                x<- paste0  (reac$target,                      prediction[1])
+                #Make sure user hasn't typed anthing while prediction was being made.  If not, make prediction
+              if (isolate(input$target == reac$target ))
+              {x<- paste0  (reac$target,                      prediction[1])
+                old.target<<-reac$target  #save current text for reject button press
                 updateButton(session,    "prediction1",label = ifelse(is.na(prediction[2]),"First Alternative",prediction[2]))
                 updateButton(session,    "prediction2",label = ifelse(is.na(prediction[3]),"Second Alternative",prediction[3]))   
                 updateButton(session,    "prediction3",label = ifelse(is.na(prediction[4]),"Third Alternative",prediction[4]))   
-                updateTextInput(session, "target", value = x)
-                # predicted.last.word<-TRUE
+                updateTextInput(session, "target", value = x)}
+                
                 }
                 } 
                 })
@@ -148,9 +146,14 @@ server <- function(input, output, session) {
                  { 
                    updateTextInput(session,
                                    "target", 
-                                   value = isolate(stri_trim_right(stri_sub(input$target,
-                                                                            1,
-                                                                            stri_locate_last_words(input$target)[1]-2))))
+                                   old.target)
+                   updateButton(session,    "prediction1",label = "First Alternative")
+                   updateButton(session,    "prediction2",label = "Second Alternative") 
+                   updateButton(session,    "prediction3",label = "Third Alternative")
+                   prediction<-NULL
+#                                    value = isolate(stri_trim_right(stri_sub(input$target,
+#                                                                             1,
+#                                                                             stri_locate_last_words(input$target)[1]-2))))
                  })
   
  
