@@ -18,7 +18,7 @@ ui <- fluidPage(theme = shinytheme ("flatly"),
                 h1("Text Prediction Tool"),
   sidebarLayout(
     sidebarPanel(
-      sliderInput("speed", "Prediction Speed (seconds)", value = 1.5, min = 0.1,max = 5,step = 0.1),
+      sliderInput("speed", "Prediction Speed (seconds)", value = 1.5, min = 0.5,max = 5,step = 0.1),
       checkboxInput("enabled","Enable text prediction", T),
       actionButton(inputId = "reset", label = "Clear Text"),
       shiny::tags$style(type = "text/css", "#reset {margin:3px; width :175px; height:50px; color:red}")
