@@ -3,41 +3,50 @@ A Text Prediction Algorithm with a Web Interface
 author: Keith Miller
 date: 19th January 2016
 
-Project Goals
+
+Building the model
 ========================================================
 
-- Develop a web based, ngram language model driven text prediction tool
-- Using a large corpus randomly drawn from news, blogs and twitter web sources, devel
-- Easy user interface with automatic prediction and alternate predictions
-- Sophisticated tagging system enables unknown words, sentence boundaries and numbers to be used for more accurate predictions
-- Large sample
-
-
-
+- Model trained on a cleaned corpus of around 17.7 million words randomly sourced from twitter, blogs and internet newsfeeds
+- Tagging of unknown words, sentence boundaries and digits was incorporated  accurate predictions
+- The model uses ngrams with a maximum order of 4
+- It has a vocabulary of around 15,000 words which together account for 95% of the all the words seen in the training corpus
+- Available corpus was divied into 3 parts - the first to train the model, the second to set $\lambda_{1-4}\$.   
 
 The Algorithm
 ========================================================
 
- - It is a quadrigram model trained on a corpus of around 35,000,000 words
- - It has a vocabulary of around 15,000 words covering  92% of the all words used in its training corpus
- - It uses interpolation to blend probabilities
- - P(y)=λ1P(unigram|∅)+λ2P(bigram|unigram)+λ3P(trigram|bigram)+λ4P(tetragram|trigram)
- - Smoothing
- - ngram weights were optimized 
+
+ - It uses interpolation to blend probabilities using the following equation
+ 
+  $$
+  \begin{aligned}
+   P(w_i) = \lambda_1P(w_i) + \lambda_2P(w_i|w_{i-1}) + \lambda_3P(w_i|w_{i-2},w_{i-1}) +lambda_4P(w_i,|w_{i-3},w_{i-2},w_{i-1})
+  \end{aligned}
+  $$
+  
+ P(y)= lambda_1p(unigram|∅)+λ2P(bigram|unigram)+λ3P(trigram|bigram)+λ4P(tetragram|trigram)
+ - Ngram propabilities were Smoothing was applied using Goo
+ - ngram weights were optimized using a held out set
+ - model accuracy measured using a separate test set of data
 
 The Application
 ========================================================
 
  - Goal was 25% accuracy with a standard deviation of 2% points
- - Actual performance is 22% accuracy with 8% standard deviation
+ - Actual performance is 15% accuracy with 2% standard deviation
+ - 
  - Total memory footprint is 
  - How fast is it - average prediction time on i7 laptop with 8Gb RAM is 0.04secs
+ - Recognizes sentences boundaries with capitlized words
+ - Predicts contractions
  - 
+ 
 Results
 ========================================================
 
  - Goal was 25% accuracy with a standard deviation of 2% points
- - Actual performance - 
- - Total memory footprint is ?????
- - How fast is it - average prediction time on i7 laptop with 8Gb RAM is 0.04secs
+ - Actual performance - 15% with 2% point SD
+ - Total memory footprint is 300Mb
+ - How fast is it - average prediction time on i7 laptop with 8Gb RAM is 0.05secs
  - 
