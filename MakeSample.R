@@ -196,7 +196,7 @@ corpSample<-function(n,size)  {
     writeLines(substring(x[[1]]$content,1,12000),con)
     
     #Remove single letters that are not valid single letters 
-    x<-tm_map(x, replacechars, "[ ][^ai\n][ ]",       " ") 
+    x<-tm_map(x, replacechars, "\\b[^ai\n]\\b",       " ") 
     writeLines("\nRemove invalid single characters\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
@@ -591,7 +591,7 @@ main<-function(resamp = F,path = "",num.sample = 200, sz.sample = 0.1, gengram =
           x<-readRDS("~/R/Capstone/Results/masterlist.RDS"),
           x<-data.table(NULL))
   
-  acc <-accuracy(tests = 10 , num.words = 500 , num.sample, model = model,  params = params)
+  acc <-accuracy(tests = 20 , num.words = 500 , num.sample, model = model,  params = params)
   
   run.number<-x[,max(unlist(Run.number))]+1
   
