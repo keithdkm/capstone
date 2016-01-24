@@ -56,7 +56,7 @@ ui <- fluidPage(theme = shinytheme ("flatly"),
                                   "right", options = list(container = "body")), 
                         bsTooltip("prediction3", "Third alternate word",
                                   "right", options = list(container = "body")),
-                        bsTooltip("reject", "Reject prediction",
+                        bsTooltip("reject", "Reject all predictions",
                                   "right", options = list(container = "body"))
 
                     ) #end of column
@@ -97,13 +97,12 @@ server <- function(input, output, session) {
                      invalidateLater(isolate(input$speed*1000),session)
                      input$target
                      input$enabled
-                     # reac$predict<-!(stri_endswith(reac$target, fixed = " "))
+                    
 #                      isolate(cat("Set timer: ", 
 #                                  "input target:",input$target,
 #                                  "reac target:",reac$target, 
 #                                  "Predict:",reac$predict,"\n", sep =","))
                      
-                     # isolate(reac$enabled <- input$enabled)
                      
                      if (isolate(reac$predict & (stri_endswith(input$target, fixed = " ")))){ isolate(reac$target  <- input$target)
                                                  }
@@ -122,7 +121,7 @@ server <- function(input, output, session) {
               # isolate(cat("Make Prediction", input$target, input$enabled, reac$target, reac$predict, "\n", sep =","))
               isolate(reac$predict              <- FALSE)
               if ( stri_endswith(isolate(input$target), fixed = " ") & !stri_endswith(isolate(input$target), fixed = ". "))
-                {
+                {old.target<<-reac$target  #save current text for reject button press
               if (input$enabled){ prediction<<- phrase(t.text = reac$target,
                                         n =  4,
                                         model = "Interpolate", 
