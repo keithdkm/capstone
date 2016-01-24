@@ -40,7 +40,7 @@ ui <- fluidPage(theme = shinytheme ("flatly"),
                       actionButton(inputId = "prediction3", label = "Third Alternative"),
                       shiny::tags$style(type = "text/css", "#prediction3 {margin:3px; width :175px; height:50px}"),
                       
-                      actionButton(inputId = "reject",              "   Reject   "),
+                      actionButton(inputId = "reject",              "Reject All"),
                       shiny::tags$style(type = "text/css", "#reject {margin:3px; width :175px; height:50px}"),
                       
                        bsTooltip("speed", "Set how quickly you want a word predicted",
@@ -50,11 +50,11 @@ ui <- fluidPage(theme = shinytheme ("flatly"),
                         
                         bsTooltip("target", "To get a prediction, type a word or words and hit space bar",
                                   "left", options = list(container = "body")),
-                        bsTooltip("prediction1", "First alternate word",
+                        bsTooltip("prediction1", "Select 1st alternate word",
                                   "right", options = list(container = "body")),
-                        bsTooltip("prediction2", "Second alternate word",
+                        bsTooltip("prediction2", "Select 2nd alternate word",
                                   "right", options = list(container = "body")), 
-                        bsTooltip("prediction3", "Third alternate word",
+                        bsTooltip("prediction3", "Select 3rd alternate word",
                                   "right", options = list(container = "body")),
                         bsTooltip("reject", "Reject all predictions",
                                   "right", options = list(container = "body"))
