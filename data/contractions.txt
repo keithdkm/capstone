@@ -1,3 +1,4 @@
+contraction, predictio, alt
 aren't , are not
 can't , cannot
 couldn't , could not
@@ -16,7 +17,7 @@ I'm , I am
 I've , I have
 isn't , is not
 let's , let us
-mightn't might not
+mightn't, might not
 mustn't , must not
 shan't , shall not
 she'd , she had, she would

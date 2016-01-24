@@ -20,14 +20,14 @@ phrase <-function(t.text,n = 1,model = "Interpolate", params = list(l1 = 0.15, l
 
 
   y <- ""
-  tags<-c("<p>","<n>", "<s>","<e>", "<UNK>")
+  tags<-c("<pr>","<num>", "<se>", "<UNK>")
   
   t.text<-stri_trim_right(t.text)   #remove whitespace
   t.text<-gsub   ('[<>]+'           ," ",t.text) #remove tagging chars
   t.text<-tolower(t.text) #set everything to lowercase
-  t.text<-gsub   (profanity         ,"<p>", t.text) #tag profanity
-  t.text<-gsub   ('[.?!]+'," <s> ",t.text) #Replace end of sentence characters with <s> tag
-  t.text<-gsub   ('((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   "<n>",t.text) #tag numbers
+  t.text<-gsub   (profanity         ,"<pr>", t.text) #tag profanity
+  t.text<-gsub   ('[.?!]+'," <se> ",t.text) #Replace end of sentence characters with <se> tag
+  t.text<-gsub   ('((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   "<num>",t.text) #tag numbers
   t.text<-gsub   ('[\'’]'           , "" ,t.text)  #remove apostrophes
   t.text<-gsub   ('[()\"“”:;,_-]'   , " ",t.text) #remove other characters
   t.text<-gsub   ('[^a-zA-Z \n<>\']', " ",t.text) #remove anything that's not a letter
@@ -123,7 +123,7 @@ phrase <-function(t.text,n = 1,model = "Interpolate", params = list(l1 = 0.15, l
     y<-unlist(lapply(y, function(t.wrd) ifelse (t.wrd %in% contractions$stripped, contractions[(contractions$stripped==t.wrd),.(contr)],t.wrd)))
     
     #capitalize start of sentence
-     if (target$w=="<s>") y<-unlist(lapply(y,.simpleCap))
+     if (target$w=="<se>") y<-unlist(lapply(y,.simpleCap))
     y
   }
   

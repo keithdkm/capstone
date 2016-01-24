@@ -18,7 +18,7 @@ ui <- fluidPage(theme = shinytheme ("flatly"),
                 h1("Text Prediction Tool"),
   sidebarLayout(
     sidebarPanel(
-      sliderInput("speed", "Prediction Speed (seconds)", value = 1.5, min = 0.1,max = 5,step = 0.1),
+      sliderInput("speed", "Prediction Speed (seconds)", value = 1.5, min = 0.5,max = 5,step = 0.1),
       checkboxInput("enabled","Enable text prediction", T),
       actionButton(inputId = "reset", label = "Clear Text"),
       shiny::tags$style(type = "text/css", "#reset {margin:3px; width :175px; height:50px; color:red}")
@@ -40,7 +40,7 @@ ui <- fluidPage(theme = shinytheme ("flatly"),
                       actionButton(inputId = "prediction3", label = "Third Alternative"),
                       shiny::tags$style(type = "text/css", "#prediction3 {margin:3px; width :175px; height:50px}"),
                       
-                      actionButton(inputId = "reject",              "   Reject   "),
+                      actionButton(inputId = "reject",              "Reject All"),
                       shiny::tags$style(type = "text/css", "#reject {margin:3px; width :175px; height:50px}"),
                       
                        bsTooltip("speed", "Set how quickly you want a word predicted",
@@ -50,13 +50,13 @@ ui <- fluidPage(theme = shinytheme ("flatly"),
                         
                         bsTooltip("target", "To get a prediction, type a word or words and hit space bar. To get a prediction after a sentence ending, hit space bar twice",
                                   "left", options = list(container = "body")),
-                        bsTooltip("prediction1", "First alternate word",
+                        bsTooltip("prediction1", "Select 1st alternate word",
                                   "right", options = list(container = "body")),
-                        bsTooltip("prediction2", "Second alternate word",
+                        bsTooltip("prediction2", "Select 2nd alternate word",
                                   "right", options = list(container = "body")), 
-                        bsTooltip("prediction3", "Third alternate word",
+                        bsTooltip("prediction3", "Select 3rd alternate word",
                                   "right", options = list(container = "body")),
-                        bsTooltip("reject", "Reject prediction",
+                        bsTooltip("reject", "Reject all predictions",
                                   "right", options = list(container = "body"))
 
                     ) #end of column
@@ -97,13 +97,12 @@ server <- function(input, output, session) {
                      invalidateLater(isolate(input$speed*1000),session)
                      input$target
                      input$enabled
-                     # reac$predict<-!(stri_endswith(reac$target, fixed = " "))
+                    
 #                      isolate(cat("Set timer: ", 
 #                                  "input target:",input$target,
 #                                  "reac target:",reac$target, 
 #                                  "Predict:",reac$predict,"\n", sep =","))
                      
-                     # isolate(reac$enabled <- input$enabled)
                      
                      if (isolate(reac$predict & (stri_endswith(input$target, fixed = " ")))){ isolate(reac$target  <- input$target)
                                                  }
@@ -120,26 +119,24 @@ server <- function(input, output, session) {
             x = {
               reac$target
               # isolate(cat("Make Prediction", input$target, input$enabled, reac$target, reac$predict, "\n", sep =","))
-              isolate(reac$predict              <- FALSE)
+              # isolate(reac$predict              <- FALSE)
               if ( stri_endswith(isolate(input$target), fixed = " ") & !stri_endswith(isolate(input$target), fixed = ". "))
-                {
-              if (input$enabled){ prediction<<- phrase(t.text = reac$target,
+                {old.target<<-stri_trim_right(reac$target)  #save current text for reject button press
+              if (input$enabled & isolate(reac$predict)){ prediction<<- phrase(t.text = reac$target,
                                         n =  4,
                                         model = "Interpolate", 
                                         params = list(l1 = 0.1,l2= 0.3, l3 = 0.4, l4 = 0.2))
+   
               
-              #### code to capitalize start of sentences
-#                   prediction<- ifelse ( stri_endswith(isolate(input$target), fixed = ".  "),
-#                    { s<-strsplit(prediction, " ")[[1]]
-#                   paste(toupper(substring(s, 1, 1)), substring(s, 2),
-#                         sep = "", collapse = " ")}, prediction)
-              
-                x<- paste0  (reac$target,                      prediction[1])
+                #Make sure user hasn't typed anthing while prediction was being made.  If not, make prediction
+              if (isolate(input$target == reac$target ))
+              {x<- paste0  (reac$target,                      prediction[1])
+                # old.target<<-reac$target  #save current text for reject button press
                 updateButton(session,    "prediction1",label = ifelse(is.na(prediction[2]),"First Alternative",prediction[2]))
                 updateButton(session,    "prediction2",label = ifelse(is.na(prediction[3]),"Second Alternative",prediction[3]))   
                 updateButton(session,    "prediction3",label = ifelse(is.na(prediction[4]),"Third Alternative",prediction[4]))   
-                updateTextInput(session, "target", value = x)
-                # predicted.last.word<-TRUE
+                updateTextInput(session, "target", value = x)}
+                
                 }
                 } 
                 })
@@ -148,44 +145,51 @@ server <- function(input, output, session) {
   ### Button Handlers 
   
   observeEvent(  input$reject,
-                 { 
-                   updateTextInput(session,
-                                   "target", 
-                                   value = isolate(stri_trim_right(stri_sub(input$target,
-                                                                            1,
-                                                                            stri_locate_last_words(input$target)[1]-2))))
+                 { reac$predict<-F
+                   updateTextInput(session = session,
+                                         "target", value = old.target)
+                   updateButton(session,    "prediction1",label = "First Alternative")
+                   updateButton(session,    "prediction2",label = "Second Alternative") 
+                   updateButton(session,    "prediction3",label = "Third Alternative")
+                   prediction<<-NULL
+#                                    value = isolate(stri_trim_right(stri_sub(input$target,
+#                                                                             1,
+#                                                                             stri_locate_last_words(input$target)[1]-2))))
                  })
   
  
 
-  observeEvent((input$prediction1 
-              
-                    ),handlerExpr = 
+### Button Handlers 
+   
+  observeEvent((input$prediction1 ),handlerExpr = 
+
                  
   {
-    
-    x<-stri_trim_right(stri_sub(input$target,
+    if (!is.null(prediction))
+    {x<-stri_trim_right(stri_sub(input$target,
                                 1,
                                 stri_locate_last_words(input$target)[1]-2))
     
     x<- paste(x, prediction[2])
     
-    updateTextInput(session, "target", value = x)}) 
+    updateTextInput(session, "target", value = x)}}) 
   
   observeEvent(input$prediction2,handlerExpr = 
                  
   {
-    
+    if (!is.null(prediction))
+    {
     x<-stri_trim_right(stri_sub(input$target,
                                 1,
                                 stri_locate_last_words(input$target)[1]-2))
     
     x<- paste(x, prediction[3])
     
-    updateTextInput(session, "target", value = x)}) 
+    updateTextInput(session, "target", value = x)}}) 
   
   observeEvent(input$prediction3,handlerExpr = 
                  
+  {if (!is.null(prediction))
   {
     
     x<-stri_trim_right(stri_sub(input$target,
@@ -194,7 +198,7 @@ server <- function(input, output, session) {
     
     x<- paste(x, prediction[4])
     
-    updateTextInput(session, "target", value = x)}) 
+    updateTextInput(session, "target", value = x)}}) 
   
   }
 
@@ -203,8 +207,5 @@ shinyApp(ui = ui, server = server)
 
 
 
-#      if (stri_endswith(input$target, fixed = " ")) addPopover(session, "target", 
-#                 title = "", 
-#                 content = "prediction")
 
   

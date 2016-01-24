@@ -125,8 +125,8 @@ corpSample<-function(n,size)  {
     conf<-file("~/R/Capstone/Web app/test/data/dirty.txt",'r')
     profanity<-paste0("\\b(",paste0(readLines(conf),collapse = "|"),")\\b")    #profanity<-readLines(conf)
     close(conf)
-    x<-tm_map(x,tagwords, profanity,replacement = "<p>")
-    writeLines("\nReplace profanity with a <p> tag\n", con)
+    x<-tm_map(x,tagwords, profanity,replacement = "<pr>")
+    writeLines("\nReplace profanity with a <pr> tag\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
    
@@ -136,9 +136,9 @@ corpSample<-function(n,size)  {
       writeLines("\nRemove stop words\n", con)
       writeLines(substring(x[[1]]$content,1,12000),con)}
     
-    #replace numbers with <n> tags
-    x<-tm_map(x, replacechars, '((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   "<n>" )  
-    writeLines("\nTag Number with <n>", con)
+    #replace numbers with <num> tags
+    x<-tm_map(x, replacechars, '((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   "<num>" )  
+    writeLines("\nTag Number with <num>", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
     #replace all apostrophes with space '
@@ -153,7 +153,7 @@ corpSample<-function(n,size)  {
         
     #replace all sentence boundaries with sentence  tag 
     
-    x<-tm_map(x, replacechars, '[.?!]+ ',              " <s> ") 
+    x<-tm_map(x, replacechars, '[.?!]+ ',              " <se> ") 
     writeLines("\nReplace sentence start and end\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
@@ -174,12 +174,7 @@ corpSample<-function(n,size)  {
     x<-tm_map(x, replacechars, '[^a-zA-Z \n<>\']',         " ")  
     writeLines("\nRemove other unknown characters\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
-    
    
-   
-    
-    
-    
     #remove extra whitespace 
     x<-tm_map(x, replacechars, '[ ][ ]+', " ") 
     writeLines("\nRemove additional whitespace characters\n", con)
@@ -365,7 +360,7 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage, unk = TRUE){
   
   # UNIGRAMS
   
-  tags<-c("<p>","<n>", "<s>","<e>", "<UNK>")
+  tags<-c("<pr>","<num>", "<se>","<e>", "<UNK>")
   
   if (max.ng>0) {
   
@@ -379,7 +374,7 @@ make.ngrams<-function(path,min.ng,max.ng,n,size,coverage, unk = TRUE){
   
   old_count<- unigrams[,sum(count)] 
   #unigrams<<-unigrams[!(ngram %in% tags),]  #remove tagged counts - we don't need to know probabilities of tags for  the moment
-  #????????????????????? should <n> and <p. have probability mass?  remove i below to give them mass   -- DONE 1/22/16
+  #????????????????????? should <num> and <p. have probability mass?  remove i below to give them mass   -- DONE 1/22/16
   unigrams<<-rbind(unigrams[,Mean.Probability := count/sum(count)][order(-count),
                                                                    ':='(Cum.Probability  = cumsum(Mean.Probability),
                                                                         probability      = as.integer(round(2^25*(Mean.Probability))))][Cum.Probability<=(coverage/100),][order(x),],
@@ -546,7 +541,7 @@ accuracy<-function(tests = 20, num.words = 500,num.sample, model = "Interpolate"
     started.at = proc.time()
     
     
-    test.table[1:num.words,prediction := lapply ( paste(u,v,w),phrase,1,model, params)]
+    test.table[1:num.words,prediction := lapply ( paste(u,v,w),function(x) { x<-tolower(x); x<-gsub("'","",x); phrase(x,1,model, params)})]
     
   
     
@@ -591,7 +586,7 @@ main<-function(resamp = F,path = "",num.sample = 200, sz.sample = 0.1, gengram =
           x<-readRDS("~/R/Capstone/Results/masterlist.RDS"),
           x<-data.table(NULL))
   
-  acc <-accuracy(tests = 20 , num.words = 500 , num.sample, model = model,  params = params)
+  acc <-accuracy(tests = 5 , num.words = 500 , num.sample, model = model,  params = params)
   
   run.number<-x[,max(unlist(Run.number))]+1
   
@@ -666,14 +661,14 @@ restore.ngrams<-function (path) {
 # perplexity <-function(y) {
 #   
 #   
-#   a<-unlist(stri_split_regex(y[[1]]$content,"<e>\n<s>"))
+#   a<-unlist(stri_split_regex(y[[1]]$content,"<e>\n<se>"))
 #   
 #   c<-data.frame(t(sapply(a[1:200], function(x){ word.count <- stri_count_words(x);
 #                             
 #                             b<-stri_extract_all_words(x)[[1]][1:2]
 #                             
-#                             phr.prob <- sum(trigrams[paste0("<e> <s> ",b[1]),pw_uv],
-#                                        trigrams[paste0("<s> ",b[1]," ",b[2]),pw_uv],na.rm = TRUE)
+#                             phr.prob <- sum(trigrams[paste0("<e> <se> ",b[1]),pw_uv],
+#                                        trigrams[paste0("<se> ",b[1]," ",b[2]),pw_uv],na.rm = TRUE)
 #                             
 #                             if(word.count>2) {b <- NGramTokenizer(x,     
 #                                                Weka_control(min        = 3, 
@@ -747,9 +742,9 @@ optimum<-function(lambda1 , lambda2, lambda3  ,lambda4,step = 0.1 ) {
   if( possibles[,.N] > 0){print(paste (possibles[, .N], " lambda combinations being tested"))
 
   lapply(split(possibles,seq(possibles[,.N])), main, resamp = F,
-                              path =   "Sample Data/250_0.1_2016_01_03_01_02_11/",
-                              num.sample = 240,
-                              sz.sample = 0.2,
+                                path =   "Sample Data/250_0.1_2016_01_24_00_39_49/",
+                              num.sample = 250,
+                              sz.sample = 0.1,
                               gengram = F,
                               ng.size = 4,
                               coverage = 95,
