@@ -48,7 +48,7 @@ ui <- fluidPage(theme = shinytheme ("flatly"),
                        bsTooltip("rest", "Clear entire text entry box",
                                  "bottom", options = list(container = "body")),   
                         
-                        bsTooltip("target", "To get a prediction, type a word or words and hit space bar",
+                        bsTooltip("target", "To get a prediction, type a word or words and hit space bar. To get a prediction after a sentence ending, hit space bar twice",
                                   "left", options = list(container = "body")),
                         bsTooltip("prediction1", "First alternate word",
                                   "right", options = list(container = "body")),
@@ -143,6 +143,9 @@ server <- function(input, output, session) {
                 }
                 } 
                 })
+ 
+  
+  ### Button Handlers 
   
   observeEvent(  input$reject,
                  { 
@@ -154,10 +157,9 @@ server <- function(input, output, session) {
                  })
   
  
-### Button Handlers 
-   
+
   observeEvent((input$prediction1 
-                # & !(is.na(prediction[2]))
+              
                     ),handlerExpr = 
                  
   {
