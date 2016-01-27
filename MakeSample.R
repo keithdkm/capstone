@@ -137,7 +137,7 @@ corpSample<-function(n,size)  {
       writeLines(substring(x[[1]]$content,1,12000),con)}
     
     #replace numbers with <num> tags
-    x<-tm_map(x, replacechars, '((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   "<num>" )  
+    x<-tm_map(x, replacechars, '((([0-9]{1,3})(,[0-9]{3})*)|([0-9]+))(.[0-9]+)?',   " <num> " )  
     writeLines("\nTag Number with <num>", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
@@ -191,11 +191,16 @@ corpSample<-function(n,size)  {
     writeLines(substring(x[[1]]$content,1,12000),con)
     
     #Remove single letters that are not valid single letters 
-    x<-tm_map(x, replacechars, "\\b[^ai\n]\\b",       " ") 
+    x<-tm_map(x, replacechars, "\\b?[^ai\n]\\b",       " ") 
     writeLines("\nRemove invalid single characters\n", con)
     writeLines(substring(x[[1]]$content,1,12000),con)
     
-    
+    #Repair damaged tags
+    x<-tm_map(x, replacechars, "<num ",       "<num> ") 
+    x<-tm_map(x, replacechars, "<se ",       "<se> ") 
+    x<-tm_map(x, replacechars, "<pr ",       "<pr> ") 
+    writeLines("\nRepair tags\n", con)
+    writeLines(substring(x[[1]]$content,1,12000),con)
     
     close(con)
     
@@ -446,7 +451,7 @@ if (max.ng > 2) {
     
     setkey(quadrigrams,u,v,w,x)
     
-    quadrigrams<<-unique (quadrigrams[count>1])
+    quadrigrams<<-unique (quadrigrams)
     
     quadrigrams[, probability := as.integer(round(2^25*(count/ (trigrams[.(quadrigrams$u,quadrigrams$v,quadrigrams$w),count])),0))]
     }
